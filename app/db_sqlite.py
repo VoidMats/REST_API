@@ -31,11 +31,11 @@ class DB_sqlite():
         self.cur = None
         self.conn = None
 
-    def run_query_non_result(self, query) -> int:
+    def run_query_non_result(self, query, values) -> int:
         id = None
         try:
             self.__create_conn()
-            self.cur.execute(query)
+            self.cur.execute(query, values)
             id = self.cur.lastrowid
             self.conn.commit()
             if not self.memory:
@@ -46,7 +46,7 @@ class DB_sqlite():
             raise APIsqlError(500, e)
         return id
 
-    def run_query_result_many(self, query) -> list:
+    def run_query_result_many(self, query, values) -> tuple:
         result = None
         try:
             self.__create_conn()

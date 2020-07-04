@@ -14,13 +14,14 @@ from flask_jwt_extended import (
     get_jwt_identity
 )
 from app.apiexception import APIexception, APImissingParameter 
+from app.db_sqlite import DB_sqlite as db
 
 jwt = JWTManager(current_app)
 
 # ====== ROUTES START HERE ======
 # ===============================
 
-@current_app.route('/', ['GET'])
+@current_app.route('/', methods=['GET'])
 def index():
     pass
 
@@ -56,25 +57,34 @@ def logout():
     except APIexception as e:
         print("Something")
 
-@current_app.route('settings', methods=['POST', 'OPTIONS'])
+@current_app.route('/settings', methods=['POST', 'OPTIONS'])
 @jwt_required
 def setup_temp():
     pass
 
+# curl -d '{"sensor":"1", "start_date":"2020-07-01", "end_date":"2020-07-4"}' -H "Content-Type: application/json" -X GET http://localhost:5000/temperature
 @current_app.route('/temperature', methods=['GET'])
 @jwt_required
 def get_temp():
     if (not request.is_json or 
+        request.json['sensor'] or
         request.json['start_date'] or
         request.json['end_date']):
         raise APImissingParameter(400, "Missing parameters in request")
 
+    sensor_id = request.json.get('sensor', None)
     start_date = request.json.get('start_date', None)
     end_date = request.json.get('end_date', None)
 
+    str_values = ", ".join('id', 'int_sensor', 'real_value', 'str_date', 'str_comment')
+    query = "SELECT " + str_values + " FROM " + current_app.config['APP_DATABASE'] 
+    query += " WHERE str_date BETWEEN ? AND ?"
+    print(query)
+    conn = db(current_app.config['APP_DATABASE'])
+    lst = db.run_query_result_many(query, (start_date, end_date))
     
-    
-    return jsonify(logged_in_as=current_user), 200
+    result = [(lambda x: x[1] == sensor_id)(row) for row in lst]
+    return jsonify(result), 200
 
 @current_app.route('/temperature', methods=['DELETE'])
 @jwt_required
