@@ -8,6 +8,8 @@ class BaseConfig:
     """
     SECRET_KEY = env.get('SECRET_KEY') or 'secret'
     INTERVAL_TIME = 5
+    TBL_SENSOR = 'tbl_sensor'
+    TBL_TEMPERATURE = 'tbl_temperature'
 
 class ProductionConfig(BaseConfig):
     DEBUG = False

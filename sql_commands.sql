@@ -10,6 +10,7 @@ CREATE TABLE tbl_temperature (
 CREATE TABLE tbl_sensor (
     id INTEGER PRIMARY KEY AUTOINCREMENT, 
     str_name CHAR(50),
+    str_folder CHAR(50),
     str_postition CHAR(50),
     str_unit CHAR(5),
     str_date_created CHAR(30),

@@ -1,9 +1,12 @@
 #! /usr/bin/python3
 
+from datetime import datetime
+import os
 from flask import (
     Flask, 
     abort, 
-    jsonify, 
+    jsonify,
+    json, 
     request, 
     current_app
 )
@@ -13,10 +16,49 @@ from flask_jwt_extended import (
     create_access_token,
     get_jwt_identity
 )
-from app.apiexception import APIexception, APImissingParameter 
+from app.apiexception import (
+    APIexception, 
+    APImissingParameter, 
+    APIreturnError
+)
 from app.db_sqlite import DB_sqlite as db
+from app.handlers import Const
+
+os.system('modprobe w1-gpio')
+os.system('modprobe w1-therm')
 
 jwt = JWTManager(current_app)
+
+# ====== CONST STRING VALUES ======
+# =================================
+
+c_queries = Const(
+    GET_TEMP = "SELECT * FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE str_date BETWEEN ? AND ?",
+    DELETE_TEMP = "DELETE FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE id == ?",
+    CREATE_SENSOR = "INSERT INTO " + current_app.config['TBL_SENSOR'] + 
+        " (str_name, str_folder, str_position, str_unit, str_date_created, str_comment) VALUES (?, ?, ?, ?, ?, ?)",
+    GET_SENSOR = "SELECT * FROM " + current_app.config['TBL_SENSOR'] + " WHERE id = ?",
+    DELETE_SENSOR = ""
+)
+
+c_folders = Const(
+    BASE_DIR = "/sys/bus/w1/devices/"
+)
+
+# ====== ERROR HANDLER HERE ======
+# ================================
+
+@current_app.errorhandler(HTTPException)
+def generic_exception(e):
+    #Return JSON instead of HTML for HTTP errors.
+    response = e.get_response()
+    response.data = json.dumps({
+        "code": e.code,
+        "name": e.name,
+        "description": e.msg,
+    })
+    response.content_type = "application/json"
+    return response
 
 # ====== ROUTES START HERE ======
 # ===============================
@@ -41,6 +83,7 @@ def login():
 
         if username != 'test' or password != 'test':
             return jsonify({"msg": "Bad username or password"}), 401
+
     except APIexception as e:
         abort(e.code, description=e.msg)
 
@@ -57,15 +100,56 @@ def logout():
     except APIexception as e:
         print("Something")
 
-@current_app.route('/settings', methods=['POST', 'OPTIONS'])
+@current_app.route('/temperature/setting', methods=['POST', 'OPTIONS'])
 @jwt_required
 def setup_temp():
-    pass
+    
+    if (not request.is_json or 
+        request.json['name'] or
+        request.json['folder'] or
+        request.json['postition'] or
+        request.json['unit'] or
+        request.json['comment']):
+        raise APImissingParameter(400, "Missing parameters in request")
+    
+    name = request.json.get('name', None)
+    folder = request.json.get('folder', None)
+    position = request.json.get('position', None)
+    unit = request.json.get('unit', None)
+    comment = request.json.get('comment', None)
+    str_date = datetime.now().date()
+    str_time = datetime.now().time()
+    date = ' '.join(str_date, str_time)
+
+    conn = db(current_app.config['APP_DATABASE'])
+    return_id = db.run_query_non_result(c_queries.CREATE_SENSOR, (name, folder, position, unit, date, comment))
+    if return_id != id:
+        raise APIreturnError(404, name='Not found', msg='Return Id from the sql database is not correct')
+    
+    return jsonify(return_id), 200
+
+
+@current_app.route('/temperature/read/<int:sensor>', methods=['GET'])
+@jwt_required
+def read_temp(sensor):
+
+    if sensor == None or sensor == '':
+        raise APImissingParameter(400, "Missing parameters in request")
+
+    print(c_queries.GET_SENSOR)
+    conn = db(current_app.config['APP_DATABASE'])
+    sensor = db.run_query_result_many(c_queries.GET_SENSOR, (sensor, ))
+
+    device_file = sensor[2] + '/w1_slave'
+    lines = None
+    with device_file as f:
+        lines = f.readlines()
 
 # curl -d '{"sensor":"1", "start_date":"2020-07-01", "end_date":"2020-07-4"}' -H "Content-Type: application/json" -X GET http://localhost:5000/temperature
 @current_app.route('/temperature', methods=['GET'])
 @jwt_required
 def get_temp():
+
     if (not request.is_json or 
         request.json['sensor'] or
         request.json['start_date'] or
@@ -76,19 +160,27 @@ def get_temp():
     start_date = request.json.get('start_date', None)
     end_date = request.json.get('end_date', None)
 
-    str_values = ", ".join('id', 'int_sensor', 'real_value', 'str_date', 'str_comment')
-    query = "SELECT " + str_values + " FROM " + current_app.config['APP_DATABASE'] 
-    query += " WHERE str_date BETWEEN ? AND ?"
-    print(query)
+    print(c_queries.GET_TEMP)
     conn = db(current_app.config['APP_DATABASE'])
-    lst = db.run_query_result_many(query, (start_date, end_date))
+    lst = db.run_query_result_many(c_queries.GET_TEMP, (start_date, end_date))
     
     result = [(lambda x: x[1] == sensor_id)(row) for row in lst]
     return jsonify(result), 200
 
-@current_app.route('/temperature', methods=['DELETE'])
+@current_app.route('/temperature/<int:id>', methods=['DELETE'])
 @jwt_required
-def delete_temp():
+def delete_temp(id):
+
+    if id == None or id == '':
+        raise APImissingParameter(400, "Missing parameters in request")
+
+    print(c_queries.DELETE_TEMP)
+    conn = db(current_app.config['APP_DATABASE'])
+    return_id = db.run_query_non_result(c_queries.DELETE_TEMP, (id, ))
+    if return_id != id:
+        raise APIreturnError(404, name='Not found', msg='Return Id from the sql database is not correct')
     
-    current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200
+    return jsonify(return_id), 200
+
+# current_user = get_jwt_identity()
+# logged_in_as=current_user
