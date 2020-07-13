@@ -2,6 +2,7 @@
 
 from datetime import datetime
 import os
+import re
 from flask import (
     Flask, 
     abort, 
@@ -141,9 +142,32 @@ def read_temp(sensor):
     sensor = db.run_query_result_many(c_queries.GET_SENSOR, (sensor, ))
 
     device_file = sensor[2] + '/w1_slave'
-    lines = None
+    reg_confirm = re.compile('YES')
+    reg_temp = re.compile('t=(\d+)')
+    temp_c = None
+    temp_f = None
     with device_file as f:
         lines = f.readlines()
+        measure_confirm = reg_confirm.match(lines)
+        if measure_confirm:
+            measure_temp = reg_temp.match(lines)
+            temp_c = float(measure_temp[1] / 1000.0)
+            temp_f = temp_c * 9.0 / 5.0 + 32.0
+
+    if sensor[4] == 'C' or sensor[4] == 'c':
+        msg = {
+            'Sensor' : sensor,
+            'Temperature' : temp_c
+        }
+        return jsonify(msg), 200
+    elif sensor[4] == 'F' or sensor[4] == 'f':
+        msg = {
+            'Sensor' : sensor,
+            'Temperature' : temp_f
+        }
+        return jsonify(msg), 200
+    else:
+        abort(404, name="Not found", msg="Sensor setting has an unknown unit")
 
 # curl -d '{"sensor":"1", "start_date":"2020-07-01", "end_date":"2020-07-4"}' -H "Content-Type: application/json" -X GET http://localhost:5000/temperature
 @current_app.route('/temperature', methods=['GET'])

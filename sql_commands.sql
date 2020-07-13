@@ -12,7 +12,7 @@ CREATE TABLE tbl_sensor (
     str_name CHAR(50),
     str_folder CHAR(50),
     str_postition CHAR(50),
-    str_unit CHAR(5),
+    str_unit CHAR(1),
     str_date_created CHAR(30),
     str_comment CHAR(50)
 );
