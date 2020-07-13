@@ -129,6 +129,16 @@ def setup_temp():
     
     return jsonify(return_id), 200
 
+@current_app.route('/temperature/start', methods=['GET', 'OPTIONS'])
+@jwt_required
+def start_temp():
+    pass
+
+@current_app.route('/temperature/stop', methods=['GET', 'OPTIONS'])
+@jwt_required
+def stop_temp():
+    pass
+
 
 @current_app.route('/temperature/read/<int:sensor>', methods=['GET'])
 @jwt_required
@@ -168,6 +178,7 @@ def read_temp(sensor):
         return jsonify(msg), 200
     else:
         abort(404, name="Not found", msg="Sensor setting has an unknown unit")
+
 
 # curl -d '{"sensor":"1", "start_date":"2020-07-01", "end_date":"2020-07-4"}' -H "Content-Type: application/json" -X GET http://localhost:5000/temperature
 @current_app.route('/temperature', methods=['GET'])
