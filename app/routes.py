@@ -24,11 +24,21 @@ from app.apiexception import (
 )
 from app.db_sqlite import DB_sqlite as db
 from app.handlers import Const
+from app.eventpool import EventPool as EventServer
 
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
 
 jwt = JWTManager(current_app)
+
+pool = EventServer(current_app.config['INTERVAL_TIME'], current_app.config['DEBUG'], current_app.config['TESTING'] )
+pool.setup_db(
+    current_app.config['APP_DATABASE'], 
+    current_app.config['TBL_TEMPERATURE'], 
+    current_app.config['TBL_SENSOR'], 
+    current_app.config['TBL_MAX_TEMP']
+)
+
 
 # ====== CONST STRING VALUES ======
 # =================================
@@ -129,15 +139,19 @@ def setup_temp():
     
     return jsonify(return_id), 200
 
-@current_app.route('/temperature/start', methods=['GET', 'OPTIONS'])
+@current_app.route('/temperature/start/<int:seconds>', methods=['GET', 'OPTIONS'])
 @jwt_required
-def start_temp():
-    pass
+def start_temp(seconds):
+    
+    if seconds == None or seconds == '':
+        raise APImissingParameter(400, "Missing parameters in request")
+
+    pool.start()
 
 @current_app.route('/temperature/stop', methods=['GET', 'OPTIONS'])
 @jwt_required
 def stop_temp():
-    pass
+    pool.stop()
 
 
 @current_app.route('/temperature/read/<int:sensor>', methods=['GET'])

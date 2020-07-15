@@ -2,7 +2,10 @@
 
 import sqlite3
 from sqlite3 import Error, DatabaseError, OperationalError
-from app.apiexception import APIexception, APIsqlError
+if __package__ == 'app':
+    from app.apiexception import APIexception, APIsqlError
+else:
+    from apiexception import APIexception, APIsqlError
 
 class DB_sqlite():
 
@@ -46,11 +49,11 @@ class DB_sqlite():
             raise APIsqlError(500, e)
         return id
 
-    def run_query_result_many(self, query, values) -> tuple:
+    def run_query_result_many(self, query, values=tuple()) -> tuple:
         result = None
         try:
             self.__create_conn()
-            self.cur.execute(query)
+            self.cur.execute(query, values)
             result = self.cur.fetchall()
             if not self.memory:
                 self.__close_conn()
