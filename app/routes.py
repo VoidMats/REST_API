@@ -31,7 +31,11 @@ os.system('modprobe w1-therm')
 
 jwt = JWTManager(current_app)
 
-pool = EventServer(current_app.config['INTERVAL_TIME'], current_app.config['DEBUG'], current_app.config['TESTING'] )
+pool = EventServer(
+    current_app.config['INTERVAL_TIME'], 
+    current_app.config['DEBUG'], 
+    current_app.config['TESTING'] 
+)
 pool.setup_db(
     current_app.config['APP_DATABASE'], 
     current_app.config['TBL_TEMPERATURE'], 
@@ -73,11 +77,6 @@ def generic_exception(e):
 
 # ====== ROUTES START HERE ======
 # ===============================
-
-@current_app.route('/', methods=['GET'])
-def index():
-    pass
-
 
 @current_app.route('/auth/login', methods=['POST'])
 def login():
@@ -151,6 +150,7 @@ def start_temp(seconds):
 @current_app.route('/temperature/stop', methods=['GET', 'OPTIONS'])
 @jwt_required
 def stop_temp():
+    
     pool.stop()
 
 
