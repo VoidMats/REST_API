@@ -21,6 +21,7 @@ class ProductionConfig(BaseConfig):
 class TestingConfig(BaseConfig):
     DEBUG = False
     TESTING = True
+    ENDPOINT_API = 'http://localhost:5000'
     DATABASE_URI = env.get('DEV_DATABASE_URI')
     APP_DATABASE = 'temperature_db.db'
 

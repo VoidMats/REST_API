@@ -17,20 +17,71 @@ from flask_jwt_extended import (
     create_access_token,
     get_jwt_identity
 )
+from werkzeug.exceptions import HTTPException
 from app.apiexception import (
     APIexception, 
     APImissingParameter, 
-    APIreturnError
+    APIreturnError,
+    APIsqlError
 )
 from app.db_sqlite import DB_sqlite as db
 from app.handlers import Const
 from app.eventpool import EventPool as EventServer
 
-os.system('modprobe w1-gpio')
-os.system('modprobe w1-therm')
+if not current_app.config['TESTING']:
+    os.system('modprobe w1-gpio')
+    os.system('modprobe w1-therm')
+
+# ====== CONST STRING VALUES ======
+# =================================
+
+c_queries = Const(
+    CREATE_TABLE_TEMP = (
+        "CREATE TABLE IF NOT EXISTS tbl_temperature ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "int_sensor INT NOT NULL, "
+        "real_value REAL NOT NULL, "
+        "str_date CHAR(30), "
+        "str_comment CHAR(50)"
+    ),
+    CREATE_TABLE_SENSOR = (
+        "CREATE TABKE IF NOT EXISTS tbl_sensor ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "str_name CHAR(50), "
+        "str_folder CHAR(50), "
+        "str_postition CHAR(50), "
+        "str_unit CHAR(1), "
+        "str_date_created CHAR(30), "
+        "str_comment CHAR(50)"
+    ),
+    GET_TEMP = "SELECT * FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE str_date BETWEEN ? AND ?",
+    DELETE_TEMP = "DELETE FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE id = ?",
+    CREATE_SENSOR = "INSERT INTO " + current_app.config['TBL_SENSOR'] + 
+        " (str_name, str_folder, str_position, str_unit, str_date_created, str_comment) VALUES (?, ?, ?, ?, ?, ?)",
+    GET_SENSOR = "SELECT * FROM " + current_app.config['TBL_SENSOR'] + " WHERE id = ?",
+    GET_SENSOR_ALL = "SELECT * FROM " + current_app.config['TBL_SENSOR'],
+    DELETE_SENSOR = "DELETE FROM " + current_app.config['TBL_SENSOR'] + " WHERE id = ?"
+)
+
+c_folders = Const(
+    BASE_DIR = "/sys/bus/w1/devices/"
+)
 
 jwt = JWTManager(current_app)
 
+# Mitigate the database
+if not current_app.config['TESTING']:
+    try:
+        # Create the table if needed
+        conn = db(current_app.config['APP_DATABASE'])
+        db.mitigate_database(c_queries.CREATE_TABLE_TEMP)
+        db.mitigate_database(c_queries.CREATE_TABLE_SENSOR)
+
+    except APIsqlError as e:
+        print("Error when mitigating the database")
+        raise 
+
+# Start the EventServer
 pool = EventServer(
     current_app.config['INTERVAL_TIME'], 
     current_app.config['DEBUG'], 
@@ -40,25 +91,9 @@ pool.setup_db(
     current_app.config['APP_DATABASE'], 
     current_app.config['TBL_TEMPERATURE'], 
     current_app.config['TBL_SENSOR'], 
-    current_app.config['TBL_MAX_TEMP']
+    current_app.config['TBL_TEMP_MAX']
 )
 
-
-# ====== CONST STRING VALUES ======
-# =================================
-
-c_queries = Const(
-    GET_TEMP = "SELECT * FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE str_date BETWEEN ? AND ?",
-    DELETE_TEMP = "DELETE FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE id == ?",
-    CREATE_SENSOR = "INSERT INTO " + current_app.config['TBL_SENSOR'] + 
-        " (str_name, str_folder, str_position, str_unit, str_date_created, str_comment) VALUES (?, ?, ?, ?, ?, ?)",
-    GET_SENSOR = "SELECT * FROM " + current_app.config['TBL_SENSOR'] + " WHERE id = ?",
-    DELETE_SENSOR = ""
-)
-
-c_folders = Const(
-    BASE_DIR = "/sys/bus/w1/devices/"
-)
 
 # ====== ERROR HANDLER HERE ======
 # ================================
@@ -110,9 +145,9 @@ def logout():
     except APIexception as e:
         print("Something")
 
-@current_app.route('/temperature/setting', methods=['POST', 'OPTIONS'])
+@current_app.route('/temperature/sensor', methods=['POST'])
 @jwt_required
-def setup_temp():
+def add_sensor():
     
     if (not request.is_json or 
         request.json['name'] or
@@ -120,7 +155,7 @@ def setup_temp():
         request.json['postition'] or
         request.json['unit'] or
         request.json['comment']):
-        raise APImissingParameter(400, "Missing parameters in request")
+        raise APImissingParameter(400, name="Bad request", description="Missing parameters in request")
     
     name = request.json.get('name', None)
     folder = request.json.get('folder', None)
@@ -134,16 +169,33 @@ def setup_temp():
     conn = db(current_app.config['APP_DATABASE'])
     return_id = db.run_query_non_result(c_queries.CREATE_SENSOR, (name, folder, position, unit, date, comment))
     if return_id != id:
-        raise APIreturnError(404, name='Not found', msg='Return Id from the sql database is not correct')
+        raise APIreturnError(404, name='Not found', description='Return Id from the sql database is not correct')
     
-    return jsonify(return_id), 200
+    return jsonify(return_id), 201
 
-@current_app.route('/temperature/start/<int:seconds>', methods=['GET', 'OPTIONS'])
+@current_app.route('/temperature/sensor', methods=['GET'])
+@jwt_required
+def get_sensor():
+    
+    conn = db(current_app.config['APP_DATABASE'])
+    return_id = db.run_query_non_result(c_queries.GET_SENSOR, ())
+    if return_id != id:
+        raise APIreturnError(404, name='Not found', description='Return Id from the sql database is not correct')
+    
+    return jsonify(return_id), 201
+
+@current_app.route('/temperature/sensor/<int:id>', methods=['DELETE'])
+@jwt_required
+def delete_sensor(id):
+    pass
+
+
+@current_app.route('/temperature/start/<int:seconds>', methods=['GET'])
 @jwt_required
 def start_temp(seconds):
     
     if seconds == None or seconds == '':
-        raise APImissingParameter(400, "Missing parameters in request")
+        raise APImissingParameter(400, name="Bad request", description="Missing parameters in request")
 
     pool.start()
 
@@ -159,7 +211,7 @@ def stop_temp():
 def read_temp(sensor):
 
     if sensor == None or sensor == '':
-        raise APImissingParameter(400, "Missing parameters in request")
+        raise APImissingParameter(400, name="Bad request", description="Missing parameters in request")
 
     print(c_queries.GET_SENSOR)
     conn = db(current_app.config['APP_DATABASE'])
@@ -191,7 +243,7 @@ def read_temp(sensor):
         }
         return jsonify(msg), 200
     else:
-        abort(404, name="Not found", msg="Sensor setting has an unknown unit")
+        abort(404, name="Not found", description="Sensor setting has an unknown unit")
 
 
 # curl -d '{"sensor":"1", "start_date":"2020-07-01", "end_date":"2020-07-4"}' -H "Content-Type: application/json" -X GET http://localhost:5000/temperature
@@ -203,7 +255,7 @@ def get_temp():
         request.json['sensor'] or
         request.json['start_date'] or
         request.json['end_date']):
-        raise APImissingParameter(400, "Missing parameters in request")
+        raise APImissingParameter(400, name="Bad request", description="Missing parameters in request")
 
     sensor_id = request.json.get('sensor', None)
     start_date = request.json.get('start_date', None)
@@ -227,7 +279,7 @@ def delete_temp(id):
     conn = db(current_app.config['APP_DATABASE'])
     return_id = db.run_query_non_result(c_queries.DELETE_TEMP, (id, ))
     if return_id != id:
-        raise APIreturnError(404, name='Not found', msg='Return Id from the sql database is not correct')
+        raise APIreturnError(404, name='Not found', description='Return Id from the sql database is not correct')
     
     return jsonify(return_id), 200
 

@@ -43,7 +43,7 @@ class EventPool():
             execute=self.__run_pool) 
         self.t_pool.setDaemon(True)
 
-    def setup_db(self, database=database, tbl_temp=tbl_temp, tbl_sensor=tbl_sensor, max_values=max_values) -> None:
+    def setup_db(self, database='database', tbl_temp='tbl_temp', tbl_sensor='tbl_sensor', max_values='max_values') -> None:
         self.database = database
         self.tbl_temp = tbl_temp
         self.tbl_sensor = tbl_sensor

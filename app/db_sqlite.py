@@ -17,13 +17,14 @@ class DB_sqlite():
         self.conn = None
 
     def __create_conn(self):
-  
         try:
             if self.memory:
-                self.conn = sqlite3.connect(':memory:')
+                if self.conn != None:
+                    self.conn = sqlite3.connect(':memory:')
             else:
                 self.conn = sqlite3.connect(self.db_name)
-            self.cur = self.conn.cursor()
+                self.cur = self.conn.cursor()
+
         except (Error, DatabaseError, OperationalError) as e:
             print("Error in __create_conn - ", e)
             if self.conn:
@@ -34,7 +35,17 @@ class DB_sqlite():
         self.cur = None
         self.conn = None
 
-    def run_query_non_result(self, query, values) -> int:
+    def mitigate_database(self, query) -> None:
+        if self.memory:
+            try:
+                self.__create_conn()
+                self.cur.execute(query, ())
+                id = self.cur.lastrowid
+                self.conn.commit()
+        else:
+            raise APIsqlError(500, "Can only mitiage database in debug mode. Hence memory flag is set high")
+
+    def run_query_non_result(self, query, values) -> int or None:
         id = None
         try:
             self.__create_conn()
@@ -45,7 +56,7 @@ class DB_sqlite():
                 self.__close_conn()
             return id
         except (Error, DatabaseError, OperationalError) as e:
-            print("Error in run_query_non_result - ", e)
+            print("Error in run_query_non_result - ", e.args[0])
             raise APIsqlError(500, e)
         return id
 
