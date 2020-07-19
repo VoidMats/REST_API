@@ -165,7 +165,7 @@ def read_temp(sensor):
     conn = db(current_app.config['APP_DATABASE'])
     sensor = db.run_query_result_many(c_queries.GET_SENSOR, (sensor, ))
 
-    device_file = sensor[2] + '/w1_slave'
+    device_file = sensor[2] + '/w1_subordinate'
     reg_confirm = re.compile('YES')
     reg_temp = re.compile('t=(\d+)')
     temp_c = None

@@ -92,7 +92,7 @@ class EventPool():
 
     def __read_temperature(self, sensor) -> tuple:
         # read the temperature from the GPIO
-        device_file = sensor[2] + '/w1_slave'
+        device_file = sensor[2] + '/w1_subordinate'
         reg_confirm = re.compile('YES')
         reg_temp = re.compile('t=(\d+)')
         temp_c = None
