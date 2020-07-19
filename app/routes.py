@@ -27,6 +27,7 @@ from app.apiexception import (
 from app.db_sqlite import DB_sqlite as db
 from app.handlers import Const
 from app.eventpool import EventPool as EventServer
+from app.mitigate import Mitigate
 
 if not current_app.config['TESTING']:
     os.system('modprobe w1-gpio')
@@ -36,24 +37,6 @@ if not current_app.config['TESTING']:
 # =================================
 
 c_queries = Const(
-    CREATE_TABLE_TEMP = (
-        "CREATE TABLE IF NOT EXISTS tbl_temperature ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        "int_sensor INT NOT NULL, "
-        "real_value REAL NOT NULL, "
-        "str_date CHAR(30), "
-        "str_comment CHAR(50)"
-    ),
-    CREATE_TABLE_SENSOR = (
-        "CREATE TABKE IF NOT EXISTS tbl_sensor ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        "str_name CHAR(50), "
-        "str_folder CHAR(50), "
-        "str_postition CHAR(50), "
-        "str_unit CHAR(1), "
-        "str_date_created CHAR(30), "
-        "str_comment CHAR(50)"
-    ),
     GET_TEMP = "SELECT * FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE str_date BETWEEN ? AND ?",
     DELETE_TEMP = "DELETE FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE id = ?",
     CREATE_SENSOR = "INSERT INTO " + current_app.config['TBL_SENSOR'] + 
@@ -68,18 +51,22 @@ c_folders = Const(
 )
 
 jwt = JWTManager(current_app)
+conn_test = None
 
 # Mitigate the database
-if not current_app.config['TESTING']:
-    try:
-        # Create the table if needed
-        conn = db(current_app.config['APP_DATABASE'])
-        db.mitigate_database(c_queries.CREATE_TABLE_TEMP)
-        db.mitigate_database(c_queries.CREATE_TABLE_SENSOR)
+try:
+    # Create the table if needed
+    mitigate_obj = None
+    if current_app.config['TESTING']:
+        mitigate_obj = Mitigate(current_app.config['APP_DATABASE'], testing=True)
+    else:
+        mitigate_obj = Mitigate(current_app.config['APP_DATABASE'])
+    
+    conn_test = mitigate_obj.create_tables()
 
-    except APIsqlError as e:
-        print("Error when mitigating the database")
-        raise 
+except APIsqlError as e:
+    print("Error when mitigating the database")
+    raise 
 
 # Start the EventServer
 pool = EventServer(
@@ -94,21 +81,35 @@ pool.setup_db(
     current_app.config['TBL_TEMP_MAX']
 )
 
-
 # ====== ERROR HANDLER HERE ======
 # ================================
 
-@current_app.errorhandler(HTTPException)
+@current_app.errorhandler(Exception)
 def generic_exception(e):
     #Return JSON instead of HTML for HTTP errors.
-    response = e.get_response()
-    response.data = json.dumps({
-        "code": e.code,
-        "name": e.name,
-        "description": e.msg,
-    })
-    response.content_type = "application/json"
-    return response
+    print("Got an Exception convert to general response")
+    if isinstance(e, HTTPException):
+        response = e.get_response()
+        response.data = json.dumps({
+            "code": e.code,
+            "name": e.name,
+            "description": e.description
+        })
+        response.content_type = "application/json"
+        return response
+    else:
+        code = None
+        try:
+            if e.code:
+                code = e.code
+        except AttributeError:
+            code = 500
+        msg = {
+            "code": code,
+            "name": e.name,
+            "description": e.msg
+        }
+        return jsonify(msg), e.code
 
 # ====== ROUTES START HERE ======
 # ===============================
@@ -121,11 +122,14 @@ def login():
     
         username = request.json.get('username', None)
         password = request.json.get('password', None)
+
         if not username:
             raise APImissingParameter(400, "Missing username parameter in payload")
         if not password:
             raise APImissingParameter(400, "Missing password parameter in payload")
 
+        # TODO Check against database
+        
         if username != 'test' or password != 'test':
             return jsonify({"msg": "Bad username or password"}), 401
 
@@ -150,39 +154,71 @@ def logout():
 def add_sensor():
     
     if (not request.is_json or 
-        request.json['name'] or
-        request.json['folder'] or
-        request.json['postition'] or
-        request.json['unit'] or
-        request.json['comment']):
-        raise APImissingParameter(400, name="Bad request", description="Missing parameters in request")
-    
+        not 'name' in request.json or
+        not 'folder' in request.json or
+        not 'position' in request.json or
+        not 'unit' in request.json or
+        not 'comment' in request.json):
+        raise APImissingParameter(400, name="Bad request", msg="Missing parameters in request - {}".format(request.json))
+
     name = request.json.get('name', None)
     folder = request.json.get('folder', None)
     position = request.json.get('position', None)
     unit = request.json.get('unit', None)
     comment = request.json.get('comment', None)
-    str_date = datetime.now().date()
-    str_time = datetime.now().time()
-    date = ' '.join(str_date, str_time)
-
-    conn = db(current_app.config['APP_DATABASE'])
-    return_id = db.run_query_non_result(c_queries.CREATE_SENSOR, (name, folder, position, unit, date, comment))
-    if return_id != id:
-        raise APIreturnError(404, name='Not found', description='Return Id from the sql database is not correct')
+    date = datetime.now().strftime('%Y:%m:%d %H:%M:%S')
     
-    return jsonify(return_id), 201
+    reg_unit = re.compile('^[c|C|f|F]')
+    match = reg_unit.match(unit)
+    if match == None:
+        raise APImissingParameter(400, name="Bad request", msg="Unit has to be F or C representing Farenheit or Celsius")
+
+    return_id = None
+    if current_app.config['TESTING']:
+        return_id = conn_test.run_query_non_result(c_queries.CREATE_SENSOR, (name, folder, position, match[0], date, comment))
+    else:
+        conn = db(current_app.config['APP_DATABASE'])
+        return_id = conn.run_query_non_result(c_queries.CREATE_SENSOR, (name, folder, position, match[0], date, comment))
+    
+    print(return_id)
+    if not isinstance(return_id, int):
+        raise APIreturnError(404, name='Not found', msg='Return Id from the sql database is not correct')
+    
+    return jsonify({'sensor_id':return_id}), 201
 
 @current_app.route('/temperature/sensor', methods=['GET'])
 @jwt_required
-def get_sensor():
+def get_all_sensor():
     
-    conn = db(current_app.config['APP_DATABASE'])
-    return_id = db.run_query_non_result(c_queries.GET_SENSOR, ())
-    if return_id != id:
-        raise APIreturnError(404, name='Not found', description='Return Id from the sql database is not correct')
+    sensors = None
+    if current_app.config['TESTING']:
+        sensor = conn_test.run_query_result_many(c_queries.GET_SENSOR_ALL, ())
+    else:
+        conn = db(current_app.config['APP_DATABASE'])
+        sensor = db.run_query_result_many(c_queries.GET_SENSOR_ALL, ())
+
+    print(sensors)
+    if not isinstance(sensor, list):
+        raise APIreturnError(404, name='Not found', msg='Sensor from the sql database is not correct')
     
-    return jsonify(return_id), 201
+    return jsonify({'sensor':sensor}), 200
+
+@current_app.route('/temperature/sensor/<int:id>', methods=['GET'])
+@jwt_required
+def get_sensor(id):
+    
+    sensor = None
+    if current_app.config['TESTING']:
+        sensor = conn_test.run_query_result_many(c_queries.GET_SENSOR, (id, ))
+    else:
+        conn = db(current_app.config['APP_DATABASE'])
+        sensor = db.run_query_result_many(c_queries.GET_SENSOR, (id, ))
+    
+    print(sensor)
+    if not isinstance(sensor, list):
+        raise APIreturnError(404, name='Not found', msg='Sensor from the sql database is not correct')
+    
+    return jsonify({'sensor':sensor}), 200
 
 @current_app.route('/temperature/sensor/<int:id>', methods=['DELETE'])
 @jwt_required
@@ -195,7 +231,7 @@ def delete_sensor(id):
 def start_temp(seconds):
     
     if seconds == None or seconds == '':
-        raise APImissingParameter(400, name="Bad request", description="Missing parameters in request")
+        raise APImissingParameter(400, name="Bad request", msg="Missing parameters in request")
 
     pool.start()
 
@@ -211,7 +247,7 @@ def stop_temp():
 def read_temp(sensor):
 
     if sensor == None or sensor == '':
-        raise APImissingParameter(400, name="Bad request", description="Missing parameters in request")
+        raise APImissingParameter(400, name="Bad request", msg="Missing parameters in request")
 
     print(c_queries.GET_SENSOR)
     conn = db(current_app.config['APP_DATABASE'])

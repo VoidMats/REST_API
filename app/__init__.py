@@ -8,14 +8,14 @@ from config import config
 
 def create_app(config_name=None):
     app = Flask(__name__, instance_relative_config=True)
-    print("----- instantiate TEMPERATURE API -----")
+    print("----- Instantiate TEMPERATURE API -----")
 
     if config_name:
         app.config.from_object(config[config_name])
-        print("* Loading {} configuration...".format(config_name))
+        print(" * Loading {} configuration...".format(config_name))
     else:
         app.config.from_object(config['development'])
-        print("* Loading development configuration ...")
+        print(" * Loading development configuration ...")
     
     try:
         os.makedirs(app.instance_path)

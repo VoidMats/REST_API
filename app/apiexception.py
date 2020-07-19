@@ -12,7 +12,7 @@ class APIexception(Exception):
 class APImissingParameter(APIexception):
 
     def __init__(self, code, name, msg=None):
-        super().__init__(code, msg=msg)
+        super().__init__(code, name, msg=msg)
 
     def __str__(self):
         return "{} - {}".format(self.code, self.msg)
@@ -24,7 +24,7 @@ class APItokenError(APIexception):
             code = 401
         if name is None:
             name = "Unauthorized"
-        super().__init__(code, msg=msg)
+        super().__init__(code, name, msg=msg)
 
     def __str__(self):
         return "{} - {}".format(self.code, self.msg)
@@ -32,7 +32,7 @@ class APItokenError(APIexception):
 class APIreturnError(APIexception):
     
     def __init__(self, code, name, msg=None):
-        super().__init__(code, msg=msg)
+        super().__init__(code, name, msg=msg)
 
     def __str__(self):
         return "{} - {}".format(self.code, self.msg)
@@ -44,7 +44,7 @@ class APIsqlError(APIexception):
             code = 500
         if name is None:
             name = "An internal error occured"
-        super().__init__(code, msg=msg)
+        super().__init__(code, name, msg=msg)
 
     def __str__(self):
         return "{} - {}".format(self.code, self.msg)
