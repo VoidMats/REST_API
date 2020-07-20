@@ -5,6 +5,8 @@ import datetime
 from threading import Thread, Event
 if __package__ == 'app':
     from app.db_sqlite import DB_sqlite
+    import logging
+    logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(threadName)s] [%(levelname)s] %(message)s')
 else:
     from db_sqlite import DB_sqlite
     import logging

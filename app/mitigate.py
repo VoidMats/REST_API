@@ -30,12 +30,19 @@ class Mitigate():
             ),
             # TODO hash password
             CREATE_TABLE_USER = (
-                "CREATE TABEL IF NOT EXISTS tbl_user ("
-                "id INTEGER PRIMERY KEY AUTOINCREMENT, "
+                "CREATE TABLE IF NOT EXISTS tbl_user ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
                 "str_first_name CHAR(50), "
                 "str_second_name CHAR(50), "
-                "str_user_name CHAR(50) NOT NULL, "
-                "str_password CHAR(250) NOT NULL)"
+                "str_user_name CHAR(50) NOT NULL UNIQUE, "
+                "str_password CHAR(250) NOT NULL UNIQUE)"
+            ),
+            INSERT_TEST_USER = (
+                "INSERT INTO tbl_user ("
+                "str_first_name, "
+                "str_second_name, "
+                "str_user_name, "
+                "str_password) VALUES (?,?,?,?)"
             )
         )
 
@@ -48,10 +55,13 @@ class Mitigate():
             self.conn = db(self.database, memory=True)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_TEMP)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_SENSOR)
-            # TODO add test user
+            self.conn.mitigate_database(self.queries.CREATE_TABLE_USER)
+            values = ('test_first', 'test_second', 'test', 'test')
+            self.conn.run_query_non_result(self.queries.INSERT_TEST_USER, values)
         else:
             self.conn = db(self.database)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_TEMP)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_SENSOR)
+            self.conn.mitigate_database(self.queries.CREATE_TABLE_USER)
 
         return self.conn

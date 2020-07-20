@@ -43,7 +43,8 @@ c_queries = Const(
         " (str_name, str_folder, str_position, str_unit, str_date_created, str_comment) VALUES (?, ?, ?, ?, ?, ?)",
     GET_SENSOR = "SELECT * FROM " + current_app.config['TBL_SENSOR'] + " WHERE id = ?",
     GET_SENSOR_ALL = "SELECT * FROM " + current_app.config['TBL_SENSOR'],
-    DELETE_SENSOR = "DELETE FROM " + current_app.config['TBL_SENSOR'] + " WHERE id = ?"
+    DELETE_SENSOR = "DELETE FROM " + current_app.config['TBL_SENSOR'] + " WHERE id = ?",
+    GET_USER = "SELECT * FROM " + current_app.config['TBL_USER'] + " WHERE str_user_name = ?"
 )
 
 c_folders = Const(
@@ -128,19 +129,26 @@ def login():
         if not password:
             raise APImissingParameter(400, "Missing password parameter in payload")
 
-        # TODO Check against database
+        user = None
+        if current_app.config['TESTING']:
+            user = conn_test.run_query_result_many(c_queries.GET_USER, (username, ))
+        else:
+            conn = db(current_app.config['APP_DATABASE'])
+            user = conn.run_query_result_many(c_queries.GET_USER, (username, ))
         
-        if username != 'test' or password != 'test':
-            return jsonify({"msg": "Bad username or password"}), 401
+        if len(user) == 1:
+            access_token = create_access_token(identity=username)
+            msg = {
+                'msg' : 'Success',
+                'token' : access_token
+            }
+            return jsonify(msg), 200
 
     except APIexception as e:
         abort(e.code, description=e.msg)
 
-    access_token = create_access_token(identity=username)
-    msg = {
-        'token' : access_token
-    }
-    return jsonify(msg), 200
+    return jsonify({"msg": "Bad username or password"}), 401
+    
 
 @current_app.route('/auth/logout', methods=['GET', 'OPTIONS'])
 def logout():
@@ -206,6 +214,9 @@ def get_all_sensor():
 @current_app.route('/temperature/sensor/<int:id>', methods=['GET'])
 @jwt_required
 def get_sensor(id):
+
+    if id == None:
+        raise APImissingParameter(400, name="Bad request", msg="Missing sensor id request")
     
     sensor = None
     if current_app.config['TESTING']:
@@ -214,7 +225,6 @@ def get_sensor(id):
         conn = db(current_app.config['APP_DATABASE'])
         sensor = db.run_query_result_many(c_queries.GET_SENSOR, (id, ))
     
-    print(sensor)
     if not isinstance(sensor, list):
         raise APIreturnError(404, name='Not found', msg='Sensor from the sql database is not correct')
     
@@ -223,7 +233,21 @@ def get_sensor(id):
 @current_app.route('/temperature/sensor/<int:id>', methods=['DELETE'])
 @jwt_required
 def delete_sensor(id):
-    pass
+    
+    if id == None:
+        raise APImissingParameter(400, name="Bad request", msg="Missing sensor id request")
+
+    sensor_id = None
+    if current_app.config['TESTING']:
+        sensor_id = conn_test.run_query_non_result(c_queries.DELETE_SENSOR, (id, ))
+    else:
+        conn = db(current_app.config['APP_DATABASE'])
+        sensor_id = db.run_query_non_result(c_queries.DELETE_SENSOR, (id, ))
+
+    if not isinstance(sensor_id, int):
+        raise APIreturnError(404, name="Not found", msg="Sensor id from SQL database is not valid")
+
+    return jsonify({'sensor_id':sensor_id}), 200
 
 
 @current_app.route('/temperature/start/<int:seconds>', methods=['GET'])

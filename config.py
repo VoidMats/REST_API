@@ -10,6 +10,7 @@ class BaseConfig:
     INTERVAL_TIME = 5
     TBL_SENSOR = 'tbl_sensor'
     TBL_TEMPERATURE = 'tbl_temperature'
+    TBL_USER = 'tbl_user'
     TBL_TEMP_MAX = 10000
 
 class ProductionConfig(BaseConfig):
