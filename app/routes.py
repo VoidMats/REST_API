@@ -257,53 +257,78 @@ def start_temp(seconds):
     if seconds == None or seconds == '':
         raise APImissingParameter(400, name="Bad request", msg="Missing parameters in request")
 
-    pool.start()
+    result = pool.start()
+    msg = {'Eventpool':'Success' if result==True else 'Failed'}
+
+    return jsonify(msg), 200
 
 @current_app.route('/temperature/stop', methods=['GET', 'OPTIONS'])
 @jwt_required
 def stop_temp():
-    
+
+    # TODO try/except    
     pool.stop()
 
+    return jsonify({'Eventpool':'Success'}), 200
 
-@current_app.route('/temperature/read/<int:sensor>', methods=['GET'])
+
+@current_app.route('/temperature/read/<int:id>', methods=['GET'])
 @jwt_required
-def read_temp(sensor):
+def read_temp(id):
 
-    if sensor == None or sensor == '':
+    if id == None or id == '':
         raise APImissingParameter(400, name="Bad request", msg="Missing parameters in request")
 
-    print(c_queries.GET_SENSOR)
-    conn = db(current_app.config['APP_DATABASE'])
-    sensor = db.run_query_result_many(c_queries.GET_SENSOR, (sensor, ))
+    try:
+        sensor = None
+        if current_app.config['TESTING']:
+            # Return a mocked temperature value
+            sensor = conn_test.run_query_result_many(c_queries.GET_SENSOR, (id, ))
+            msg = {
+                'Sensor' : sensor,
+                'Temperature' : 26.54
+            }
+            return jsonify(msg), 200
+        else:
+            # Read temperature value from DS18B20
+            conn = db(current_app.config['APP_DATABASE'])
+            sensor = db.run_query_result_many(c_queries.GET_SENSOR, (id, ))
+            
+            device_file = sensor[2] + '/w1_slave'
+            reg_confirm = re.compile('YES')
+            reg_temp = re.compile('t=(\d+)')
+            temp_c = None
+            temp_f = None
 
-    device_file = sensor[2] + '/w1_slave'
-    reg_confirm = re.compile('YES')
-    reg_temp = re.compile('t=(\d+)')
-    temp_c = None
-    temp_f = None
-    with device_file as f:
-        lines = f.readlines()
-        measure_confirm = reg_confirm.match(lines)
-        if measure_confirm:
-            measure_temp = reg_temp.match(lines)
-            temp_c = float(measure_temp[1] / 1000.0)
-            temp_f = temp_c * 9.0 / 5.0 + 32.0
+            with device_file as f:
+                lines = f.readlines()
+                measure_confirm = reg_confirm.match(lines)
+                if measure_confirm:
+                    measure_temp = reg_temp.match(lines)
+                    temp_c = float(measure_temp[1] / 1000.0)
+                    temp_f = temp_c * 9.0 / 5.0 + 32.0
 
-    if sensor[4] == 'C' or sensor[4] == 'c':
-        msg = {
-            'Sensor' : sensor,
-            'Temperature' : temp_c
-        }
-        return jsonify(msg), 200
-    elif sensor[4] == 'F' or sensor[4] == 'f':
-        msg = {
-            'Sensor' : sensor,
-            'Temperature' : temp_f
-        }
-        return jsonify(msg), 200
-    else:
-        abort(404, name="Not found", description="Sensor setting has an unknown unit")
+            if sensor[4] == 'C' or sensor[4] == 'c':
+                msg = {
+                    'Sensor' : sensor,
+                    'Temperature' : temp_c
+                }
+                return jsonify(msg), 200
+            elif sensor[4] == 'F' or sensor[4] == 'f':
+                msg = {
+                    'Sensor' : sensor,
+                    'Temperature' : temp_f
+                }
+                return jsonify(msg), 200
+            else:
+                APIreturnError(404, name="Not found", msg="Sensor setting has an unknown unit")
+        
+    except APIexception as e:
+        if not name in e:
+            e.name = "General fault"
+        if not msg in e:
+            e.msg = "Server error - {}".format(e.description()) 
+        abort(404, e)
 
 
 # curl -d '{"sensor":"1", "start_date":"2020-07-01", "end_date":"2020-07-4"}' -H "Content-Type: application/json" -X GET http://localhost:5000/temperature
@@ -321,7 +346,6 @@ def get_temp():
     start_date = request.json.get('start_date', None)
     end_date = request.json.get('end_date', None)
 
-    print(c_queries.GET_TEMP)
     conn = db(current_app.config['APP_DATABASE'])
     lst = db.run_query_result_many(c_queries.GET_TEMP, (start_date, end_date))
     

@@ -41,7 +41,6 @@ class DB_sqlite():
         if self.memory:
             try:
                 self.__create_conn()
-                print(self.cur)
                 self.cur.execute(query, ())
                 id = self.cur.lastrowid
                 self.conn.commit()

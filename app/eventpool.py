@@ -7,10 +7,12 @@ if __package__ == 'app':
     from app.db_sqlite import DB_sqlite
     import logging
     logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(threadName)s] [%(levelname)s] %(message)s')
+    logging.debug('Instantiate Eventpool from app')
 else:
     from db_sqlite import DB_sqlite
     import logging
     logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(threadName)s] [%(levelname)s] %(message)s')
+    logging.debug('Instantiate Eventpool from __main__')
     from time import sleep
 
 class Worker(Thread):
@@ -45,15 +47,18 @@ class EventPool():
             execute=self.__run_pool) 
         self.t_pool.setDaemon(True)
 
-    def setup_db(self, database='database', tbl_temp='tbl_temp', tbl_sensor='tbl_sensor', max_values='max_values') -> None:
+    def setup_db(self, database='temperature_db.db', tbl_temp='tbl_temperature', tbl_sensor='tbl_sensor', max_values='max_values') -> None:
         self.database = database
         self.tbl_temp = tbl_temp
         self.tbl_sensor = tbl_sensor
         self.max_values = max_values
         
-    def start(self) -> None:
+    def start(self) -> bool:
         if not self.t_pool.is_alive():
             self.t_pool.start()
+            return self.t_pool.is_alive()
+        else:
+            return self.t_pool.is_alive()
 
     def stop(self) -> None:
         if self.t_pool.is_alive():
@@ -61,7 +66,7 @@ class EventPool():
 
     def __run_pool(self) -> None:
         if self.testing:
-            if self.debug: logging.debug('We are running test functions')
+            if self.debug: logging.debug('We are running test function')
             self.__test_function()
         else:
             self.__execute()
@@ -85,7 +90,7 @@ class EventPool():
             db = DB_sqlite(self.database)
             return_id = db.run_query_non_result(QUERY, (result[0], result[1], date, "Temperature reading from interval recording"))
             if return_id != None:
-                print("Save temperature value {} from sensor {} into database".format(result[1], result[0]))
+                logging.debug("Save temperature value {} from sensor {} into database".format(result[1], result[0]))
 
         # Check how many values are in the table
 

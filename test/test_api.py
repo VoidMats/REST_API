@@ -12,6 +12,8 @@ import time
 # Our written python scripts
 from config import TestingConfig
 
+#config = {'ENDPOINT_API':'http://192.168.0.102:5045/'}
+
 """
 Important note Gunicorn and Flask developement server uses different errror codes
 during an error. For example wrong header will create a 404 code in Flask while in 
@@ -321,12 +323,12 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 200, msg=req.status_code)
         self.assertEqual(len(req.json()['sensor']), 0)
 
-    def test_5_EventserverStart(self):
+    def test_5_EventpoolStart(self):
 
         # ===== TEST WITH WRONG HEADER =====
         url = TestingConfig.ENDPOINT_API + "temperature/start/2"
         req = requests.get(url)
-        print("*** Answer testEventserverStart : WRONG HEADER ***")
+        print("*** Answer testEventpoolStart : WRONG HEADER ***")
         print("URL: ", url)
         print("ANSWER: ", req.text)
         self.assertEqual(req.status_code, 401, msg=req.status_code)
@@ -336,7 +338,7 @@ class TestAPI(unittest.TestCase):
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.put(url, headers=headers)
-        print("*** Answer testEventserverStart : WRONG METHOD ***")
+        print("*** Answer testEventpoolStart : WRONG METHOD ***")
         print("URL: ", url)
         print("HEADERS: ", headers)
         print(req.text)
@@ -347,7 +349,7 @@ class TestAPI(unittest.TestCase):
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.get(url, headers=headers)
-        print("\n*** Answer testEventserverStart : WITHOUT TOKEN ***")
+        print("\n*** Answer testEventpoolStart : WITHOUT TOKEN ***")
         print("URL: ", url)
         print("HEADERS: ", headers)
         print(req.text)
@@ -361,12 +363,129 @@ class TestAPI(unittest.TestCase):
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.get(url, headers=headers)
-        print("*** Answer testEventserverStart : WITH TOKEN ***")
+        print("*** Answer testEventpoolStart : WITH TOKEN ***")
         print("URL: ", url)
         print("HEADERS: ", headers)
         print(req.text)
         self.assertEqual(req.status_code, 200, msg=req.status_code)
 
+        # Sleep for 11 s
+        print("We will sleep for 11 s. Please check server that test_function has been triggered")
+        time.sleep(11)
+
+    
+    def test_6_EventpoolStop(self):
+
+        # ===== TEST WITH WRONG HEADER =====
+        url = TestingConfig.ENDPOINT_API + "temperature/stop"
+        req = requests.get(url)
+        print("*** Answer testEventpoolStop : WRONG HEADER ***")
+        print("URL: ", url)
+        print("ANSWER: ", req.text)
+        self.assertEqual(req.status_code, 401, msg=req.status_code)
+
+        # ===== TEST WRONG METHOD =====
+        url = TestingConfig.ENDPOINT_API + "temperature/stop"
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format('')}
+        req = requests.put(url, headers=headers)
+        print("*** Answer testEventpoolStop : WRONG METHOD ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code,405, msg=req.status_code)
+
+        # ===== TEST WITHOUT TOKEN =====
+        url = TestingConfig.ENDPOINT_API + "temperature/stop"
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format('')}
+        req = requests.get(url, headers=headers)
+        print("\n*** Answer testEventpoolStop : WITHOUT TOKEN ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code, 422, msg=req.status_code)
+
+        # ===== TEST WITH TOKEN =====
+        req = self.login('test', 'test')
+        token = req.json()['token']
+
+        url = TestingConfig.ENDPOINT_API + "temperature/stop"
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format(token)}
+        req = requests.get(url, headers=headers)
+        print("*** Answer testEventpoolStartStop : WITH TOKEN ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code, 200, msg=req.status_code)
+
+    def test_7_ReadTemp(self):
+
+        # ====== ADDING ONE SENSOR ======
+        req = self.login('test', 'test')
+        token = req.json()['token']
+
+        url = TestingConfig.ENDPOINT_API + "/temperature/sensor"
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format(token)}
+        payload = {
+            'name':'test1',
+            'folder':'28-00006637696',
+            'position':'test_position',
+            'unit':'c',
+            'comment':'test sensor - first'
+        }
+        req = requests.post(url, headers=headers, json=payload)
+        print("*** Answer testReadTemp - Adding sensor : WITH TOKEN ***")
+        print("URL: ", url)
+        print("PAYLOAD: ", payload)
+        print("HEADERS: ", headers)
+        print(req.text)
+        global sensor_id 
+        sensor_id = req.json()['sensor_id']
+        self.assertEqual(req.status_code, 201, msg=req.status_code)
+
+        # ===== TEST WITH WRONG HEADER =====
+        url = TestingConfig.ENDPOINT_API + "temperature/read/" + str(sensor_id)
+        req = requests.get(url)
+        print("*** Answer testReadTemp : WRONG HEADER ***")
+        print("URL: ", url)
+        print("ANSWER: ", req.text)
+        self.assertEqual(req.status_code, 401, msg=req.status_code)
+
+        # ===== TEST WRONG METHOD =====
+        url = TestingConfig.ENDPOINT_API + "temperature/read/" + str(sensor_id)
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format('')}
+        req = requests.put(url, headers=headers)
+        print("*** Answer testReadTemp : WRONG METHOD ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code,405, msg=req.status_code)
+
+        # ===== TEST WITHOUT TOKEN =====
+        url = TestingConfig.ENDPOINT_API + "temperature/read/" + str(sensor_id)
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format('')}
+        req = requests.get(url, headers=headers)
+        print("\n*** Answer testReadTemp : WITHOUT TOKEN ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code, 422, msg=req.status_code)
+
+        # ===== TEST WITH TOKEN =====
+        url = TestingConfig.ENDPOINT_API + "temperature/read/" + str(sensor_id)
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format(token)}
+        req = requests.get(url, headers=headers)
+        print("*** Answer testReadTemp : WITH TOKEN ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code, 200, msg=req.status_code)
 
 
     #===============================================================
