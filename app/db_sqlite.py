@@ -46,11 +46,14 @@ class DB_sqlite():
             print("Error in run_query_non_result - ", e.args[0])
             raise APIsqlError(500, name='SQL error', msg=e)
 
-    def run_query_non_result(self, query, values) -> int or None:
+    def run_query_non_result(self, query, values=None) -> int or None:
         id = None
         try:
             self.__create_conn()
-            self.cur.execute(query, values)
+            if values == None:
+                self.cur.execute(query)
+            else:
+                self.cur.execute(query, values)
             id = self.cur.lastrowid
             self.conn.commit()
             if not self.memory:
@@ -61,11 +64,14 @@ class DB_sqlite():
             raise APIsqlError(500, name='SQL error', msg=e)
         return id
 
-    def run_query_result_many(self, query, values=tuple()) -> tuple:
+    def run_query_result_many(self, query, values=None) -> tuple:
         result = None
         try:
             self.__create_conn()
-            self.cur.execute(query, values)
+            if values == None:
+                self.cur.execute(query)
+            else:
+                self.cur.execute(query, values)
             result = self.cur.fetchall()
             if not self.memory:
                 self.__close_conn()

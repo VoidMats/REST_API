@@ -71,7 +71,7 @@ class EventPool():
         else:
             self.__execute()
 
-    def __execute(self, time) -> None:
+    def __execute(self) -> None:
 
         # Get all sensors from database
         QUERY = "SELECT * FROM "  + self.tbl_sensor 
@@ -79,7 +79,7 @@ class EventPool():
         sensors = db.run_query_result_many(query=QUERY)
 
         # Run through all sensors and record there values
-        for sensor in self.sensors:
+        for sensor in sensors:
             result = self.__read_temperature(sensor)
             # Enter result into database
             QUERY = "INSERT INTO " + self.tbl_temp + " (int_sensor, real_value, str_date, str_comment) VALUES (?, ?, ?, ?)"

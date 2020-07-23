@@ -6,6 +6,8 @@ if [ -f .venv/bin/activate ]; then
 fi
 exec "$@"
 
+export RUN_MODE=production
+
 gunicorn -b :5045 --threads 4 --access-logfile - --error-logfile - TEMP_API:app
 
 # --log-level debug = For gunicorn debug

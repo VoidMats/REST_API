@@ -12,7 +12,8 @@ import time
 # Our written python scripts
 #from config import TestingConfig
 
-endpoint = 'http://192.168.0.102:5045/'
+#endpoint = 'http://192.168.0.102:5045/'
+endpoint = 'http://localhost:5045/'
 
 """
 Important note Gunicorn and Flask developement server uses different errror codes
@@ -88,7 +89,7 @@ class TestAPI(unittest.TestCase):
                    'Authorization': 'Bearer {0}'.format('')}
         payload = {
             'name':'test1',
-            'folder':'28-00006637696',
+            'folder':'28-0516b501daff',
             'position':'test_position',
             'unit':'c',
             'comment':'test sensor - first'
@@ -107,7 +108,7 @@ class TestAPI(unittest.TestCase):
                    'Authorization': 'Bearer {0}'.format('')}
         payload = {
             'name':'test1',
-            'folder':'28-00006637696',
+            'folder':'28-0516b501daff',
             'position':'test_position',
             'unit':'c',
             'comment':'test sensor - first'
@@ -129,7 +130,7 @@ class TestAPI(unittest.TestCase):
                    'Authorization': 'Bearer {0}'.format(token)}
         payload = {
             'name':'test1',
-            'folder':'28-00006637696',
+            'folder':'28-0516b501daff',
             'position':'test_position',
             'unit':'c',
             'comment':'test sensor - first'
@@ -233,7 +234,7 @@ class TestAPI(unittest.TestCase):
                    'Authorization': 'Bearer {0}'.format(token)}
         payload = {
             'name':'test2',
-            'folder':'28-00006637697',
+            'folder':'28-0516b501daff',
             'position':'test_position',
             'unit':'c',
             'comment':'test sensor - second'
@@ -431,7 +432,7 @@ class TestAPI(unittest.TestCase):
                    'Authorization': 'Bearer {0}'.format(token)}
         payload = {
             'name':'test1',
-            'folder':'28-00006637696',
+            'folder':'28-0516b501daff',
             'position':'test_position',
             'unit':'c',
             'comment':'test sensor - first'
