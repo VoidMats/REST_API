@@ -10,9 +10,9 @@ import unittest
 import requests
 import time
 # Our written python scripts
-from config import TestingConfig
+#from config import TestingConfig
 
-#config = {'ENDPOINT_API':'http://192.168.0.102:5045/'}
+endpoint = 'http://192.168.0.102:5045/'
 
 """
 Important note Gunicorn and Flask developement server uses different errror codes
@@ -42,7 +42,7 @@ class TestAPI(unittest.TestCase):
     def test_0_Login(self):
 
         # ===== TEST WRONG METHOD =====
-        url = TestingConfig.ENDPOINT_API + "auth/login"
+        url = endpoint + "auth/login"
         headers = {'Content-Type': 'application/json'}
         payload = {
             'username':'test',
@@ -57,7 +57,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = TestingConfig.ENDPOINT_API + "auth/login"
+        url = endpoint + "auth/login"
         headers = {'Content-Type': 'application/json'}
         payload = {
             'username':'test',
@@ -75,7 +75,7 @@ class TestAPI(unittest.TestCase):
     def test_1_AddSensor(self):
 
         # ===== TEST WITH WRONG HEADER =====
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor"
+        url = endpoint + "temperature/sensor"
         req = requests.post(url)
         print("*** Answer testAddSensor : WRONG HEADER ***")
         print("URL: ", url)
@@ -83,7 +83,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 401, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor"
+        url = endpoint + "temperature/sensor"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         payload = {
@@ -102,7 +102,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor"
+        url = endpoint + "temperature/sensor"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         payload = {
@@ -124,7 +124,7 @@ class TestAPI(unittest.TestCase):
         req = self.login('test', 'test')
         token = req.json()['token']
 
-        url = TestingConfig.ENDPOINT_API + "/temperature/sensor"
+        url = endpoint + "/temperature/sensor"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         payload = {
@@ -147,7 +147,7 @@ class TestAPI(unittest.TestCase):
     def test_2_GetSensor(self):
 
         # ===== TEST WITH WRONG HEADER =====
-        url = TestingConfig.ENDPOINT_API + "/temperature/sensor/" + str(sensor_id)
+        url = endpoint + "/temperature/sensor/" + str(sensor_id)
         req = requests.get(url)
         print("*** Answer testGetSensor : WRONG HEADER ***")
         print("URL: ", url)
@@ -155,7 +155,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 401, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor/" + str(sensor_id)
+        url = endpoint + "temperature/sensor/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.put(url, headers=headers)
@@ -166,7 +166,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor/" + str(sensor_id)
+        url = endpoint + "temperature/sensor/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.get(url, headers=headers)
@@ -180,7 +180,7 @@ class TestAPI(unittest.TestCase):
         req = self.login('test', 'test')
         token = req.json()['token']
 
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor/" + str(sensor_id)
+        url = endpoint + "temperature/sensor/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.get(url, headers=headers)
@@ -194,7 +194,7 @@ class TestAPI(unittest.TestCase):
     def test_3_GetAllSensor(self):
 
         # ===== TEST WITH WRONG HEADER =====
-        url = TestingConfig.ENDPOINT_API + "/temperature/sensor"
+        url = endpoint + "/temperature/sensor"
         req = requests.get(url)
         print("*** Answer testGetAllSensor : WRONG HEADER ***")
         print("URL: ", url)
@@ -202,7 +202,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 401, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor"
+        url = endpoint + "temperature/sensor"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.put(url, headers=headers)
@@ -213,7 +213,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor"
+        url = endpoint + "temperature/sensor"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.get(url, headers=headers)
@@ -228,7 +228,7 @@ class TestAPI(unittest.TestCase):
         token = req.json()['token']
         
         # Adding one more sensor
-        url = TestingConfig.ENDPOINT_API + "/temperature/sensor"
+        url = endpoint + "/temperature/sensor"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         payload = {
@@ -243,7 +243,7 @@ class TestAPI(unittest.TestCase):
         sensor_id2 = req.json()['sensor_id']
         
         # Get all sensors
-        url = TestingConfig.ENDPOINT_API + "/temperature/sensor"
+        url = endpoint + "/temperature/sensor"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.get(url, headers=headers)
@@ -260,7 +260,7 @@ class TestAPI(unittest.TestCase):
         # ===== TEST WITH WRONG HEADER =====
         global sensor_id
         global sensor_id2
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor/" + str(sensor_id)
+        url = endpoint + "temperature/sensor/" + str(sensor_id)
         req = requests.delete(url)
         print("*** Answer testDeleteSensor : WRONG HEADER ***")
         print("URL: ", url)
@@ -268,7 +268,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 401, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor/" + str(sensor_id)
+        url = endpoint + "temperature/sensor/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.put(url, headers=headers)
@@ -279,7 +279,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor/" + str(sensor_id)
+        url = endpoint + "temperature/sensor/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.delete(url, headers=headers)
@@ -294,7 +294,7 @@ class TestAPI(unittest.TestCase):
         token = req.json()['token']
         
         # Delete first sensor
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor/" + str(sensor_id)
+        url = endpoint + "temperature/sensor/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.delete(url, headers=headers)
@@ -305,14 +305,14 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 200, msg=req.status_code)
 
         # Delete second sensor
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor/" + str(sensor_id2)
+        url = endpoint + "temperature/sensor/" + str(sensor_id2)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.delete(url, headers=headers)
         self.assertEqual(req.status_code, 200, msg=req.status_code)
 
         # Get all sensors
-        url = TestingConfig.ENDPOINT_API + "temperature/sensor"
+        url = endpoint + "temperature/sensor"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.get(url, headers=headers)
@@ -326,7 +326,7 @@ class TestAPI(unittest.TestCase):
     def test_5_EventpoolStart(self):
 
         # ===== TEST WITH WRONG HEADER =====
-        url = TestingConfig.ENDPOINT_API + "temperature/start/2"
+        url = endpoint + "temperature/start/2"
         req = requests.get(url)
         print("*** Answer testEventpoolStart : WRONG HEADER ***")
         print("URL: ", url)
@@ -334,7 +334,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 401, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
-        url = TestingConfig.ENDPOINT_API + "temperature/start/2"
+        url = endpoint + "temperature/start/2"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.put(url, headers=headers)
@@ -345,7 +345,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = TestingConfig.ENDPOINT_API + "temperature/start/2"
+        url = endpoint + "temperature/start/2"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.get(url, headers=headers)
@@ -359,7 +359,7 @@ class TestAPI(unittest.TestCase):
         req = self.login('test', 'test')
         token = req.json()['token']
 
-        url = TestingConfig.ENDPOINT_API + "temperature/start/2"
+        url = endpoint + "temperature/start/2"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.get(url, headers=headers)
@@ -377,7 +377,7 @@ class TestAPI(unittest.TestCase):
     def test_6_EventpoolStop(self):
 
         # ===== TEST WITH WRONG HEADER =====
-        url = TestingConfig.ENDPOINT_API + "temperature/stop"
+        url = endpoint + "temperature/stop"
         req = requests.get(url)
         print("*** Answer testEventpoolStop : WRONG HEADER ***")
         print("URL: ", url)
@@ -385,7 +385,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 401, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
-        url = TestingConfig.ENDPOINT_API + "temperature/stop"
+        url = endpoint + "temperature/stop"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.put(url, headers=headers)
@@ -396,7 +396,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = TestingConfig.ENDPOINT_API + "temperature/stop"
+        url = endpoint + "temperature/stop"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.get(url, headers=headers)
@@ -410,7 +410,7 @@ class TestAPI(unittest.TestCase):
         req = self.login('test', 'test')
         token = req.json()['token']
 
-        url = TestingConfig.ENDPOINT_API + "temperature/stop"
+        url = endpoint + "temperature/stop"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.get(url, headers=headers)
@@ -426,7 +426,7 @@ class TestAPI(unittest.TestCase):
         req = self.login('test', 'test')
         token = req.json()['token']
 
-        url = TestingConfig.ENDPOINT_API + "/temperature/sensor"
+        url = endpoint + "/temperature/sensor"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         payload = {
@@ -447,7 +447,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 201, msg=req.status_code)
 
         # ===== TEST WITH WRONG HEADER =====
-        url = TestingConfig.ENDPOINT_API + "temperature/read/" + str(sensor_id)
+        url = endpoint + "temperature/read/" + str(sensor_id)
         req = requests.get(url)
         print("*** Answer testReadTemp : WRONG HEADER ***")
         print("URL: ", url)
@@ -455,7 +455,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 401, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
-        url = TestingConfig.ENDPOINT_API + "temperature/read/" + str(sensor_id)
+        url = endpoint + "temperature/read/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.put(url, headers=headers)
@@ -466,7 +466,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = TestingConfig.ENDPOINT_API + "temperature/read/" + str(sensor_id)
+        url = endpoint + "temperature/read/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.get(url, headers=headers)
@@ -477,7 +477,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 422, msg=req.status_code)
 
         # ===== TEST WITH TOKEN =====
-        url = TestingConfig.ENDPOINT_API + "temperature/read/" + str(sensor_id)
+        url = endpoint + "temperature/read/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.get(url, headers=headers)
@@ -493,7 +493,7 @@ class TestAPI(unittest.TestCase):
     #===============================================================
 
     def login(self, user, pwd) -> requests:
-        url = TestingConfig.ENDPOINT_API + "auth/login"
+        url = endpoint + "auth/login"
         headers = {'Content-Type': 'application/json'}
         payload = {
             'username':user, 

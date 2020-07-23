@@ -37,18 +37,14 @@ class DB_sqlite():
         self.conn = None
 
     def mitigate_database(self, query) -> None:
-        # TODO This maybe not needed 
-        if self.memory:
-            try:
-                self.__create_conn()
-                self.cur.execute(query, ())
-                id = self.cur.lastrowid
-                self.conn.commit()
-            except (Error, DatabaseError, OperationalError) as e:
-                print("Error in run_query_non_result - ", e.args[0])
-                raise APIsqlError(500, name='SQL error', msg=e)
-        else:
-            raise APIsqlError(500, "Can only mitiage database in debug mode. Hence memory flag is set high")
+        try:
+            self.__create_conn()
+            self.cur.execute(query, ())
+            id = self.cur.lastrowid
+            self.conn.commit()
+        except (Error, DatabaseError, OperationalError) as e:
+            print("Error in run_query_non_result - ", e.args[0])
+            raise APIsqlError(500, name='SQL error', msg=e)
 
     def run_query_non_result(self, query, values) -> int or None:
         id = None
