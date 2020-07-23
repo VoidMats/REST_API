@@ -220,10 +220,10 @@ def get_sensor(id):
     
     sensor = None
     if current_app.config['TESTING']:
-        sensor = conn_test.run_query_result_many(c_queries.GET_SENSOR, (id, ))
+        sensor = conn_test.run_query_result_many(c_queries.GET_SENSOR, (str(id), ))
     else:
         conn = db(current_app.config['APP_DATABASE'])
-        sensor = db.run_query_result_many(c_queries.GET_SENSOR, (id, ))
+        sensor = db.run_query_result_many(c_queries.GET_SENSOR, (str(id), ))
     
     if not isinstance(sensor, list):
         raise APIreturnError(404, name='Not found', msg='Sensor from the sql database is not correct')
