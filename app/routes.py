@@ -29,9 +29,9 @@ from app.handlers import Const
 from app.eventpool import EventPool as EventServer
 from app.mitigate import Mitigate
 
-if not current_app.config['TESTING']:
-    os.system('modprobe w1-gpio')
-    os.system('modprobe w1-therm')
+#if not current_app.config['TESTING']:
+#    os.system('modprobe w1-gpio')
+#    os.system('modprobe w1-therm')
 
 # ====== CONST STRING VALUES ======
 # =================================
@@ -133,6 +133,7 @@ def login():
         if current_app.config['TESTING']:
             user = conn_test.run_query_result_many(c_queries.GET_USER, (username, ))
         else:
+            print("we are not testing")
             conn = db(current_app.config['APP_DATABASE'])
             user = conn.run_query_result_many(c_queries.GET_USER, (username, ))
         
@@ -200,16 +201,16 @@ def get_all_sensor():
     
     sensors = None
     if current_app.config['TESTING']:
-        sensor = conn_test.run_query_result_many(c_queries.GET_SENSOR_ALL, ())
+        sensors = conn_test.run_query_result_many(c_queries.GET_SENSOR_ALL)
     else:
         conn = db(current_app.config['APP_DATABASE'])
-        sensor = db.run_query_result_many(c_queries.GET_SENSOR_ALL, ())
+        sensors = conn.run_query_result_many(c_queries.GET_SENSOR_ALL)
 
     print(sensors)
-    if not isinstance(sensor, list):
+    if not isinstance(sensors, list):
         raise APIreturnError(404, name='Not found', msg='Sensor from the sql database is not correct')
     
-    return jsonify({'sensor':sensor}), 200
+    return jsonify({'sensor':sensors}), 200
 
 @current_app.route('/temperature/sensor/<int:id>', methods=['GET'])
 @jwt_required
@@ -223,7 +224,7 @@ def get_sensor(id):
         sensor = conn_test.run_query_result_many(c_queries.GET_SENSOR, (str(id), ))
     else:
         conn = db(current_app.config['APP_DATABASE'])
-        sensor = db.run_query_result_many(c_queries.GET_SENSOR, (str(id), ))
+        sensor = conn.run_query_result_many(c_queries.GET_SENSOR, (str(id), ))
     
     if not isinstance(sensor, list):
         raise APIreturnError(404, name='Not found', msg='Sensor from the sql database is not correct')
@@ -239,10 +240,10 @@ def delete_sensor(id):
 
     sensor_id = None
     if current_app.config['TESTING']:
-        sensor_id = conn_test.run_query_non_result(c_queries.DELETE_SENSOR, (id, ))
+        sensor_id = conn_test.run_query_non_result(c_queries.DELETE_SENSOR, (str(id), ))
     else:
         conn = db(current_app.config['APP_DATABASE'])
-        sensor_id = db.run_query_non_result(c_queries.DELETE_SENSOR, (id, ))
+        sensor_id = conn.run_query_non_result(c_queries.DELETE_SENSOR, (str(id), ))
 
     if not isinstance(sensor_id, int):
         raise APIreturnError(404, name="Not found", msg="Sensor id from SQL database is not valid")
