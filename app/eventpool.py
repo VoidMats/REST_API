@@ -106,6 +106,7 @@ class EventPool():
         temp_f = None
         with device_file as f:
             lines = f.readlines()
+            time.sleep(1)
             measure_confirm = reg_confirm.match(lines)
             if measure_confirm:
                 measure_temp = reg_temp.match(lines)

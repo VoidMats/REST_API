@@ -12,8 +12,8 @@ import time
 # Our written python scripts
 #from config import TestingConfig
 
-#endpoint = 'http://192.168.0.102:5045/'
-endpoint = 'http://localhost:5045/'
+endpoint = 'http://192.168.0.102:5045/'
+#endpoint = 'http://localhost:5045/'
 
 """
 Important note Gunicorn and Flask developement server uses different errror codes

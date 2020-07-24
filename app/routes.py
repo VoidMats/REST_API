@@ -293,9 +293,10 @@ def read_temp(id):
         else:
             # Read temperature value from DS18B20
             conn = db(current_app.config['APP_DATABASE'])
-            sensor = db.run_query_result_many(c_queries.GET_SENSOR, (id, ))
+            sensor = conn.run_query_result_many(c_queries.GET_SENSOR, (id, ))
             
-            device_file = sensor[2] + '/w1_slave'
+            device_file = sensor[0][2] + '/w1_slave'
+            print(device_file)
             reg_confirm = re.compile('YES')
             reg_temp = re.compile('t=(\d+)')
             temp_c = None
