@@ -22,7 +22,8 @@ from app.apiexception import (
     APIexception, 
     APImissingParameter, 
     APIreturnError,
-    APIsqlError
+    APIsqlError,
+    APIonewireError
 )
 from app.db_sqlite import DB_sqlite as db
 from app.handlers import Const
@@ -295,20 +296,37 @@ def read_temp(id):
             conn = db(current_app.config['APP_DATABASE'])
             sensor = conn.run_query_result_many(c_queries.GET_SENSOR, (id, ))
             
-            device_file = sensor[0][2] + '/w1_slave'
+            device_file = c_folders.BASE_DIR + sensor[0][2] + '/w1_slave'
             print(device_file)
             reg_confirm = re.compile('YES')
             reg_temp = re.compile('t=(\d+)')
             temp_c = None
             temp_f = None
 
-            with device_file as f:
+            def read_temp():
+                lines = read_temp_raw()
+                while lines[0].strip()[-3:] != 'YES':
+                    time.sleep(0.2)
+                    lines = read_temp_raw()
+                equals_pos = lines[1].find('t=')
+                if equals_pos != -1:
+                    temp_string = lines[1][equals_pos+2:]
+                    temp_c = float(temp_string) / 1000.0
+                    temp_f = temp_c * 9.0 / 5.0 + 32.0
+                    return temp_c, temp_f
+            try:
+                # NB with device_file as f: -> Does not work
+                f = open(device_file, 'r')
                 lines = f.readlines()
+                f.close()
+                
                 measure_confirm = reg_confirm.match(lines)
                 if measure_confirm:
                     measure_temp = reg_temp.match(lines)
                     temp_c = float(measure_temp[1] / 1000.0)
                     temp_f = temp_c * 9.0 / 5.0 + 32.0
+            except OSError:
+                APIonewireError(500, "Hardware error", "Could not open/read file: {}".format(device_file))
 
             if sensor[4] == 'C' or sensor[4] == 'c':
                 msg = {
