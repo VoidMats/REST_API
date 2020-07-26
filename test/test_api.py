@@ -12,7 +12,7 @@ import time
 # Our written python scripts
 #from config import TestingConfig
 
-endpoint = 'http://192.168.0.104:5045/'
+endpoint = 'http://192.168.0.252:5045/'
 #endpoint = 'http://localhost:5045/'
 
 """

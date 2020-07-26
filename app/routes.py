@@ -190,7 +190,6 @@ def add_sensor():
         conn = db(current_app.config['APP_DATABASE'])
         return_id = conn.run_query_non_result(c_queries.CREATE_SENSOR, (name, folder, position, match[0], date, comment))
     
-    print(return_id)
     if not isinstance(return_id, int):
         raise APIreturnError(404, name='Not found', msg='Return Id from the sql database is not correct')
     
@@ -287,44 +286,33 @@ def read_temp(id):
             # Return a mocked temperature value
             sensor = conn_test.run_query_result_many(c_queries.GET_SENSOR, (id, ))
             msg = {
-                'Sensor' : sensor,
+                'Sensor' : sensor[0],
                 'Temperature' : 26.54
             }
             return jsonify(msg), 200
         else:
             # Read temperature value from DS18B20
             conn = db(current_app.config['APP_DATABASE'])
-            sensor = conn.run_query_result_many(c_queries.GET_SENSOR, (id, ))
-            
-            device_file = c_folders.BASE_DIR + sensor[0][2] + '/w1_slave'
-            print(device_file)
+            sensors = conn.run_query_result_many(c_queries.GET_SENSOR, (id, ))
+            sensor = sensors[0]
+            device_file = c_folders.BASE_DIR + sensor[2] + '/w1_slave'
             reg_confirm = re.compile('YES')
             reg_temp = re.compile('t=(\d+)')
             temp_c = None
             temp_f = None
 
-            def read_temp():
-                lines = read_temp_raw()
-                while lines[0].strip()[-3:] != 'YES':
-                    time.sleep(0.2)
-                    lines = read_temp_raw()
-                equals_pos = lines[1].find('t=')
-                if equals_pos != -1:
-                    temp_string = lines[1][equals_pos+2:]
-                    temp_c = float(temp_string) / 1000.0
-                    temp_f = temp_c * 9.0 / 5.0 + 32.0
-                    return temp_c, temp_f
             try:
                 # NB with device_file as f: -> Does not work
                 f = open(device_file, 'r')
                 lines = f.readlines()
                 f.close()
                 
-                measure_confirm = reg_confirm.match(lines)
+                measure_confirm = reg_confirm.search(lines[0])
                 if measure_confirm:
-                    measure_temp = reg_temp.match(lines)
-                    temp_c = float(measure_temp[1] / 1000.0)
+                    measure_temp = reg_temp.search(lines[1])
+                    temp_c = float(measure_temp[1]) / 1000.0
                     temp_f = temp_c * 9.0 / 5.0 + 32.0
+
             except OSError:
                 APIonewireError(500, "Hardware error", "Could not open/read file: {}".format(device_file))
 
