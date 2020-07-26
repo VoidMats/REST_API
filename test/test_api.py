@@ -12,13 +12,12 @@ import time
 # Our written python scripts
 #from config import TestingConfig
 
-#endpoint = 'http://192.168.0.102:5045/'
-endpoint = 'http://localhost:5045/'
+endpoint = 'http://192.168.0.104:5045/'
+#endpoint = 'http://localhost:5045/'
 
 """
-Important note Gunicorn and Flask developement server uses different errror codes
-during an error. For example wrong header will create a 404 code in Flask while in 
-gunicorn it will be a 401 code.
+Important note - Gunicorn and Flask developement server uses different error codes
+during a failure. 
 """
 
 sensor_id = None

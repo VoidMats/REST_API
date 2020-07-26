@@ -22,7 +22,8 @@ from app.apiexception import (
     APIexception, 
     APImissingParameter, 
     APIreturnError,
-    APIsqlError
+    APIsqlError,
+    APIonewireError
 )
 from app.db_sqlite import DB_sqlite as db
 from app.handlers import Const
@@ -293,23 +294,35 @@ def read_temp(id):
         else:
             # Read temperature value from DS18B20
             conn = db(current_app.config['APP_DATABASE'])
-            sensor = conn.run_query_result_many(c_queries.GET_SENSOR, (id, ))
-            print("We are reading this sensor", sensor)
+            sensors = conn.run_query_result_many(c_queries.GET_SENSOR, (id, ))
+            sensor = sensors[0]
 
-            device_file = c_folders.BASE_DIR + sensor[0][2] + '/w1_slave'
+            print("We are reading this sensor", sensor)
+            device_file = c_folders.BASE_DIR + sensor[2] + '/w1_slave'
             print("From this file", device_file)
+
             reg_confirm = re.compile('YES')
             reg_temp = re.compile('t=(\d+)')
             temp_c = None
             temp_f = None
 
-            with device_file as f:
+            try:
+                # NB with device_file as f: -> Does not work
+                f = open(device_file, 'r')
                 lines = f.readlines()
-                measure_confirm = reg_confirm.match(lines)
+                f.close()
+                print("Lines read from file")
+                print(lines)
+
+                measure_confirm = reg_confirm.search(lines[0])
+                print(measure_confirm)
                 if measure_confirm:
-                    measure_temp = reg_temp.match(lines)
-                    temp_c = float(measure_temp[1] / 1000.0)
+                    measure_temp = reg_temp.search(lines[1])
+                    print(measure_temp[1])
+                    temp_c = float(measure_temp[1]) / 1000.0
                     temp_f = temp_c * 9.0 / 5.0 + 32.0
+            except OSError:
+                APIonewireError(500, "Hardware error", "Could not open/read file: {}".format(device_file))
 
             if sensor[4] == 'C' or sensor[4] == 'c':
                 msg = {

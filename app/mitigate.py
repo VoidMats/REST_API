@@ -1,7 +1,7 @@
 
 from app.db_sqlite import DB_sqlite as db
 from app.handlers import Const
-from app.apiexception import APIsqlError
+from app.apiexception import APIexception, APIsqlError
 
 class Mitigate():
 
@@ -45,6 +45,7 @@ class Mitigate():
                 "str_user_name, "
                 "str_password) VALUES (?,?,?,?)"
             )
+            # TODO SELECT test user
         )
 
     def create_tables(self) -> db:
@@ -65,6 +66,7 @@ class Mitigate():
             self.conn.mitigate_database(self.queries.CREATE_TABLE_TEMP)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_SENSOR)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_USER)
+
             #try:
                 #values = ('test', 'test', 'test', 'test')
                 #self.conn.run_query_non_result(self.queries.INSERT_TEST_USER, values)

@@ -60,3 +60,11 @@ class APIserviceExit(APIexception):
 
     def __str__(self):
         return "{} - {}".format(self.code, self.msg)
+
+class APIonewireError(APIexception):
+
+    def __init__(self, code, name, msg=None):
+        super().__init__(code, name, msg=msg)
+
+    def __str__(self):
+        return "{} - {}".format(self.code, self.msg)
