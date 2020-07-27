@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 
 import re
-import datetime
+from datetime import datetime
 from threading import Thread, Event
 from time import sleep
 
@@ -92,17 +92,15 @@ class EventPool():
             result = self.__read_temperature(sensor)
             # Enter result into database
             QUERY = "INSERT INTO " + self.tbl_temp + " (int_sensor, real_value, str_date, str_comment) VALUES (?, ?, ?, ?)"
-            str_date = datetime.now().date()
-            str_time = datetime.now().time()
-            date = ' '.join(str_date, str_time)
+            str_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
             db = DB_sqlite(self.database)
-            return_id = db.run_query_non_result(QUERY, (result[0], result[1], date, "Temperature reading from interval recording"))
+            return_id = db.run_query_non_result(QUERY, (result[0], result[1], str_date, "Temperature reading from interval recording"))
             if return_id != None:
                 logging.debug("Save temperature value {} from sensor {} into database".format(result[1], result[0]))
         
 
-        # Check how many values are in the table
+        # TODO Check how many values are in the table
 
     def __test_function(self) -> None:
         logging.debug("Trigger test_function")

@@ -9,6 +9,7 @@ sys.path.append("../")
 import unittest
 import requests
 import time
+from datetime import datetime, timedelta
 # Our written python scripts
 #from config import TestingConfig
 
@@ -22,6 +23,7 @@ during a failure.
 
 sensor_id = None
 sensor_id2 = None
+sensor_id3 = None
 
 class TestAPI(unittest.TestCase):
 
@@ -321,9 +323,27 @@ class TestAPI(unittest.TestCase):
         print("HEADERS: ", headers)
         print(req.text)
         self.assertEqual(req.status_code, 200, msg=req.status_code)
-        self.assertEqual(len(req.json()['sensor']), 0)
+        #self.assertEqual(len(req.json()['sensor']), 0)
 
     def test_5_EventpoolStart(self):
+
+        req = self.login('test', 'test')
+        token = req.json()['token']
+
+        url = endpoint + "/temperature/sensor"
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format(token)}
+        payload = {
+            'name':'test3',
+            'folder':'28-0516b501daff',
+            'position':'test_position',
+            'unit':'c',
+            'comment':'test sensor - first'
+        }
+        req = requests.post(url, headers=headers, json=payload)
+        global sensor_id3 
+        sensor_id3 = req.json()['sensor_id']
+        self.assertEqual(req.status_code, 201, msg=req.status_code)
 
         # ===== TEST WITH WRONG HEADER =====
         url = endpoint + "temperature/start/2"
@@ -420,6 +440,13 @@ class TestAPI(unittest.TestCase):
         print(req.text)
         self.assertEqual(req.status_code, 200, msg=req.status_code)
 
+        # ===== REMOVE SENSOR =====
+        url = endpoint + "temperature/sensor/" + str(sensor_id3)
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format(token)}
+        req = requests.delete(url, headers=headers)
+        self.assertEqual(req.status_code, 200, msg=req.status_code)
+
     def test_7_ReadTemp(self):
 
         # ====== ADDING ONE SENSOR ======
@@ -487,6 +514,65 @@ class TestAPI(unittest.TestCase):
         print(req.text)
         self.assertEqual(req.status_code, 200, msg=req.status_code)
 
+        # ===== REMOVE THE SENSOR =====
+        url = endpoint + "temperature/sensor/" + str(sensor_id)
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format(token)}
+        req = requests.delete(url, headers=headers)
+        self.assertEqual(req.status_code, 200, msg=req.status_code)
+
+    def test_8_GetTemp(self):
+
+        # ===== TEST WITH WRONG HEADER =====
+        url = endpoint + "temperature"
+        req = requests.get(url)
+        print("*** Answer testGetTemp : WRONG HEADER ***")
+        print("URL: ", url)
+        print("ANSWER: ", req.text)
+        self.assertEqual(req.status_code, 401, msg=req.status_code)
+
+        # ===== TEST WRONG METHOD =====
+        url = endpoint + "temperature"
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format('')}
+        req = requests.put(url, headers=headers)
+        print("*** Answer testGetTemp : WRONG METHOD ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code,405, msg=req.status_code)
+
+        # ===== TEST WITHOUT TOKEN =====
+        url = endpoint + "temperature"
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format('')}
+        req = requests.get(url, headers=headers)
+        print("\n*** Answer testGetTemp : WITHOUT TOKEN ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code, 422, msg=req.status_code)
+
+        # ===== TEST WITH TOKEN =====
+        req = self.login('test', 'test')
+        token = req.json()['token']
+
+        url = endpoint + "temperature"
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format(token)}
+        dt =datetime.now() - timedelta(seconds=15)
+        payload = {
+            'sensor' : sensor_id3,
+            'start_date' : dt.strftime('%Y-%m-%d %H:%M:%S'),
+            'end_date' : datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        req = requests.get(url, headers=headers)
+        print("*** Answer testGetTemp : WITH TOKEN ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print("PAYLOAD: ", payload)
+        print(req.text)
+        self.assertEqual(req.status_code, 200, msg=req.status_code)
 
     #===============================================================
     # INTERNAL METHODS
