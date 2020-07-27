@@ -22,7 +22,8 @@ from app.apiexception import (
     APIexception, 
     APImissingParameter, 
     APIreturnError,
-    APIsqlError
+    APIsqlError,
+    APIonewireError
 )
 from app.db_sqlite import DB_sqlite as db
 from app.handlers import Const
@@ -189,7 +190,6 @@ def add_sensor():
         conn = db(current_app.config['APP_DATABASE'])
         return_id = conn.run_query_non_result(c_queries.CREATE_SENSOR, (name, folder, position, match[0], date, comment))
     
-    print(return_id)
     if not isinstance(return_id, int):
         raise APIreturnError(404, name='Not found', msg='Return Id from the sql database is not correct')
     
@@ -286,28 +286,35 @@ def read_temp(id):
             # Return a mocked temperature value
             sensor = conn_test.run_query_result_many(c_queries.GET_SENSOR, (id, ))
             msg = {
-                'Sensor' : sensor,
+                'Sensor' : sensor[0],
                 'Temperature' : 26.54
             }
             return jsonify(msg), 200
         else:
             # Read temperature value from DS18B20
             conn = db(current_app.config['APP_DATABASE'])
-            sensor = db.run_query_result_many(c_queries.GET_SENSOR, (id, ))
-            
-            device_file = sensor[2] + '/w1_slave'
+            sensors = conn.run_query_result_many(c_queries.GET_SENSOR, (id, ))
+            sensor = sensors[0]
+            device_file = c_folders.BASE_DIR + sensor[2] + '/w1_slave'
             reg_confirm = re.compile('YES')
             reg_temp = re.compile('t=(\d+)')
             temp_c = None
             temp_f = None
 
-            with device_file as f:
+            try:
+                # NB with device_file as f: -> Does not work
+                f = open(device_file, 'r')
                 lines = f.readlines()
-                measure_confirm = reg_confirm.match(lines)
+                f.close()
+                
+                measure_confirm = reg_confirm.search(lines[0])
                 if measure_confirm:
-                    measure_temp = reg_temp.match(lines)
-                    temp_c = float(measure_temp[1] / 1000.0)
+                    measure_temp = reg_temp.search(lines[1])
+                    temp_c = float(measure_temp[1]) / 1000.0
                     temp_f = temp_c * 9.0 / 5.0 + 32.0
+
+            except OSError:
+                APIonewireError(500, "Hardware error", "Could not open/read file: {}".format(device_file))
 
             if sensor[4] == 'C' or sensor[4] == 'c':
                 msg = {

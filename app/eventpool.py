@@ -1,19 +1,28 @@
 #! /usr/bin/python3
 
 import re
-import datetime
+from datetime import datetime
 from threading import Thread, Event
+from time import sleep
+
 if __package__ == 'app':
     from app.db_sqlite import DB_sqlite
+    from app.handlers import Const
+    from app.apiexception import APIonewireError
     import logging
     logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(threadName)s] [%(levelname)s] %(message)s')
     logging.debug('Instantiate Eventpool from app')
 else:
     from db_sqlite import DB_sqlite
+    from handlers import Const
+    from apiexception import APIonewireError
     import logging
     logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(threadName)s] [%(levelname)s] %(message)s')
     logging.debug('Instantiate Eventpool from __main__')
-    from time import sleep
+
+c_folders = Const(
+    BASE_DIR = "/sys/bus/w1/devices/"
+)
 
 class Worker(Thread):
 
@@ -83,34 +92,41 @@ class EventPool():
             result = self.__read_temperature(sensor)
             # Enter result into database
             QUERY = "INSERT INTO " + self.tbl_temp + " (int_sensor, real_value, str_date, str_comment) VALUES (?, ?, ?, ?)"
-            str_date = datetime.now().date()
-            str_time = datetime.now().time()
-            date = ' '.join(str_date, str_time)
+            str_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
             db = DB_sqlite(self.database)
-            return_id = db.run_query_non_result(QUERY, (result[0], result[1], date, "Temperature reading from interval recording"))
+            return_id = db.run_query_non_result(QUERY, (result[0], result[1], str_date, "Temperature reading from interval recording"))
             if return_id != None:
                 logging.debug("Save temperature value {} from sensor {} into database".format(result[1], result[0]))
+        
 
-        # Check how many values are in the table
+        # TODO Check how many values are in the table
 
     def __test_function(self) -> None:
         logging.debug("Trigger test_function")
 
     def __read_temperature(self, sensor) -> tuple:
-        # read the temperature from the GPIO
-        device_file = sensor[2] + '/w1_slave'
+        # read the temperature from the DS18B20
+        device_file = c_folders.BASE_DIR + sensor[2] + '/w1_slave'
         reg_confirm = re.compile('YES')
         reg_temp = re.compile('t=(\d+)')
         temp_c = None
         temp_f = None
-        with device_file as f:
+
+        try:
+            # NB with device_file as f: -> Does not work
+            f = open(device_file, 'r')
             lines = f.readlines()
-            measure_confirm = reg_confirm.match(lines)
+            f.close()
+            
+            measure_confirm = reg_confirm.search(lines[0])
             if measure_confirm:
-                measure_temp = reg_temp.match(lines)
-                temp_c = float(measure_temp[1] / 1000.0)
+                measure_temp = reg_temp.search(lines[1])
+                temp_c = float(measure_temp[1]) / 1000.0
                 temp_f = temp_c * 9.0 / 5.0 + 32.0
+
+        except OSError:
+            APIonewireError(500, "Hardware error", "Could not open/read file: {}".format(device_file))
 
         if sensor[4] == 'C' or sensor[4] == 'c':
             return (sensor[0], temp_c)
