@@ -8,14 +8,14 @@ from time import sleep
 if __package__ == 'app':
     from app.db_sqlite import DB_sqlite
     from app.handlers import Const
-    from app.apiexception import APIonewireError
+    from app.apiexception import APIonewireError, APIsqlError
     import logging
     logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(threadName)s] [%(levelname)s] %(message)s')
     logging.debug('Instantiate Eventpool from app')
 else:
     from db_sqlite import DB_sqlite
     from handlers import Const
-    from apiexception import APIonewireError
+    from apiexception import APIonewireError, APIsqlError
     import logging
     logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] [%(threadName)s] [%(levelname)s] %(message)s')
     logging.debug('Instantiate Eventpool from __main__')
@@ -58,7 +58,15 @@ class EventPool():
 
     def setup_db(self, database='temperature_db.db', tbl_temp='tbl_temperature', tbl_sensor='tbl_sensor', max_values='max_values') -> None:
         self.database = database
+        # Check the table name for faulty character
+        reg_sqlinjection = re.compile('\W')
+        sqlinjection = reg_sqlinjection.findall(tbl_temp)
+        if sqlinjection:
+            raise APIsqlError(500, "Internal server error", "Attempt to inject SQL query")
         self.tbl_temp = tbl_temp
+        sqlinjection = reg_sqlinjection.findall(tbl_sensor)
+        if sqlinjection:
+            raise APIsqlError(500, "Internal server error", "Attempt to inject SQL query")
         self.tbl_sensor = tbl_sensor
         self.max_values = max_values
         
@@ -84,8 +92,8 @@ class EventPool():
 
         # Get all sensors from database
         QUERY = "SELECT * FROM "  + self.tbl_sensor 
-        db = DB_sqlite(self.database)
-        sensors = db.run_query_result_many(query=QUERY)
+        conn = DB_sqlite(self.database)
+        sensors = conn.run_query_result_many(query=QUERY)
 
         # Run through all sensors and record there values
         for sensor in sensors:
@@ -94,13 +102,17 @@ class EventPool():
             QUERY = "INSERT INTO " + self.tbl_temp + " (int_sensor, real_value, str_date, str_comment) VALUES (?, ?, ?, ?)"
             str_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-            db = DB_sqlite(self.database)
-            return_id = db.run_query_non_result(QUERY, (result[0], result[1], str_date, "Temperature reading from interval recording"))
+            #conn = DB_sqlite(self.database)
+            return_id = conn.run_query_non_result(QUERY, (result[0], result[1], str_date, "Temperature reading from interval recording"))
             if return_id != None:
                 logging.debug("Save temperature value {} from sensor {} into database".format(result[1], result[0]))
         
-
-        # TODO Check how many values are in the table
+        # Check how many values are in the table and remove if above limit
+        QUERY = ("DELETE FROM " + self.tbl_temp + 
+                " WHERE ROWID IN (SELECT ROWID FROM " + self.tbl_temp + 
+                " ORDER BY ROWID DESC LIMIT -1 OFFSET ?)")
+        result = conn.run_query_non_result(QUERY, (self.max_values))
+        print(result)
 
     def __test_function(self) -> None:
         logging.debug("Trigger test_function")
