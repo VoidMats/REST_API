@@ -64,7 +64,7 @@ class DB_sqlite():
             raise APIsqlError(500, name='SQL error', msg=e)
         return id
 
-    def run_query_result_many(self, query, values=None) -> tuple:
+    def run_query_result_many(self, query, values=None) -> list:
         result = None
         try:
             self.__create_conn()

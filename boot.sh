@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-if [ venv/bin/activate ]; then
+if [ -f venv/bin/activate ]; then
     echo   "Load Python virtualenv from '.venv/bin/activate'"
     source venv/bin/activate
 fi

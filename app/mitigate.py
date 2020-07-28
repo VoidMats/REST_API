@@ -50,10 +50,6 @@ class Mitigate():
 
     def create_tables(self) -> db:
 
-        #print(self.queries.CREATE_TABLE_TEMP)
-        #print(self.queries.CREATE_TABLE_USER)
-        #print(self.database)
-
         if self.testing:
             self.conn = db(self.database, memory=True)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_TEMP)
