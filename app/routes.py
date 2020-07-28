@@ -190,7 +190,6 @@ def add_sensor():
         conn = db(current_app.config['APP_DATABASE'])
         return_id = conn.run_query_non_result(c_queries.CREATE_SENSOR, (name, folder, position, match[0], date, comment))
     
-    print(return_id)
     if not isinstance(return_id, int):
         raise APIreturnError(404, name='Not found', msg='Return Id from the sql database is not correct')
     
@@ -287,7 +286,7 @@ def read_temp(id):
             # Return a mocked temperature value
             sensor = conn_test.run_query_result_many(c_queries.GET_SENSOR, (id, ))
             msg = {
-                'Sensor' : sensor,
+                'Sensor' : sensor[0],
                 'Temperature' : 26.54
             }
             return jsonify(msg), 200
@@ -296,11 +295,7 @@ def read_temp(id):
             conn = db(current_app.config['APP_DATABASE'])
             sensors = conn.run_query_result_many(c_queries.GET_SENSOR, (id, ))
             sensor = sensors[0]
-
-            print("We are reading this sensor", sensor)
             device_file = c_folders.BASE_DIR + sensor[2] + '/w1_slave'
-            print("From this file", device_file)
-
             reg_confirm = re.compile('YES')
             reg_temp = re.compile('t=(\d+)')
             temp_c = None
@@ -311,8 +306,6 @@ def read_temp(id):
                 f = open(device_file, 'r')
                 lines = f.readlines()
                 f.close()
-                print("Lines read from file")
-                print(lines)
 
                 measure_confirm = reg_confirm.search(lines[0])
                 print(measure_confirm)
@@ -321,6 +314,7 @@ def read_temp(id):
                     print(measure_temp[1])
                     temp_c = float(measure_temp[1]) / 1000.0
                     temp_f = temp_c * 9.0 / 5.0 + 32.0
+
             except OSError:
                 APIonewireError(500, "Hardware error", "Could not open/read file: {}".format(device_file))
 
@@ -358,6 +352,7 @@ def get_temp():
         request.json['end_date']):
         raise APImissingParameter(400, name="Bad request", description="Missing parameters in request")
 
+    print("We are inside route get_temp")
     sensor_id = request.json.get('sensor', None)
     start_date = request.json.get('start_date', None)
     end_date = request.json.get('end_date', None)
