@@ -111,7 +111,7 @@ class EventPool():
             result = self.__read_temperature(sensor)
             # Enter result into database
             QUERY = "INSERT INTO " + self.tbl_temp + " (int_sensor, real_value, str_date, str_comment) VALUES (?, ?, ?, ?)"
-            str_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            str_date = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
             #conn = DB_sqlite(self.database)
             return_id = conn.run_query_non_result(QUERY, (result[0], result[1], str_date, "Temperature reading from interval recording"))

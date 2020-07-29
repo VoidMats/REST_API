@@ -38,7 +38,7 @@ from app.mitigate import Mitigate
 # =================================
 
 c_queries = Const(
-    GET_TEMP = "SELECT * FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE str_date BETWEEN ? AND ?",
+    GET_TEMP = "SELECT id, int_sensor, real_value, str_date FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE str_date BETWEEN ? AND ?",
     DELETE_TEMP = "DELETE FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE id = ?",
     CREATE_SENSOR = "INSERT INTO " + current_app.config['TBL_SENSOR'] + 
         " (str_name, str_folder, str_position, str_unit, str_date_created, str_comment) VALUES (?, ?, ?, ?, ?, ?)",
@@ -89,8 +89,8 @@ pool.setup_db(
 @current_app.errorhandler(Exception)
 def generic_exception(e):
     #Return JSON instead of HTML for HTTP errors.
-    print("Got an Exception convert to general response")
     if isinstance(e, HTTPException):
+        print("Got an Exception convert to general response")
         response = e.get_response()
         response.data = json.dumps({
             "code": e.code,
@@ -356,9 +356,14 @@ def get_temp():
 
     conn = db(current_app.config['APP_DATABASE'])
     lst = conn.run_query_result_many(c_queries.GET_TEMP, (start_date, end_date))
-    
-    result = [(lambda x: x[1] == sensor_id)(row) for row in lst]
-    return jsonify(result), 200
+
+    check_id = lambda x: x[1] == sensor_id
+    result = [row for row in lst if check_id(row)]
+    msg = {
+        'Sensor' : sensor_id,
+        'Temperature' : result
+    }
+    return jsonify(msg), 200
 
 @current_app.route('/temperature/<int:id>', methods=['DELETE'])
 @jwt_required
@@ -367,13 +372,17 @@ def delete_temp(id):
     if id == None or id == '':
         raise APImissingParameter(400, "Missing parameters in request")
 
-    print(c_queries.DELETE_TEMP)
     conn = db(current_app.config['APP_DATABASE'])
-    return_id = conn.run_query_non_result(c_queries.DELETE_TEMP, (id, ))
-    if return_id != id:
+    last_row = conn.run_query_non_result(c_queries.DELETE_TEMP, (id, ))
+    
+    if not isinstance(last_row, int) or last_row == -1:
         raise APIreturnError(404, name='Not found', description='Return Id from the sql database is not correct')
     
-    return jsonify(return_id), 200
+    msg = {
+        'Temperature' : id,
+        'Success' : 1 if last_row == 0 else 0
+    }
+    return jsonify(msg), 200
 
 # current_user = get_jwt_identity()
 # logged_in_as=current_user
