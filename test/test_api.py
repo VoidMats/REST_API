@@ -24,6 +24,7 @@ during a failure.
 sensor_id = None
 sensor_id2 = None
 sensor_id3 = None
+temperature_rowid = None
 
 class TestAPI(unittest.TestCase):
 
@@ -346,7 +347,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 201, msg=req.status_code)
 
         # ===== TEST WITH WRONG HEADER =====
-        url = endpoint + "temperature/start/2"
+        url = endpoint + "temperature/start/5"
         req = requests.get(url)
         print("*** Answer testEventpoolStart : WRONG HEADER ***")
         print("URL: ", url)
@@ -354,7 +355,6 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 401, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
-        url = endpoint + "temperature/start/2"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.put(url, headers=headers)
@@ -365,9 +365,6 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = endpoint + "temperature/start/2"
-        headers = {'Content-Type': 'application/json',
-                   'Authorization': 'Bearer {0}'.format('')}
         req = requests.get(url, headers=headers)
         print("\n*** Answer testEventpoolStart : WITHOUT TOKEN ***")
         print("URL: ", url)
@@ -379,19 +376,19 @@ class TestAPI(unittest.TestCase):
         req = self.login('test', 'test')
         token = req.json()['token']
 
-        url = endpoint + "temperature/start/2"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.get(url, headers=headers)
         print("*** Answer testEventpoolStart : WITH TOKEN ***")
         print("URL: ", url)
         print("HEADERS: ", headers)
+        print("READING SENSOR: ", sensor_id3)
         print(req.text)
         self.assertEqual(req.status_code, 200, msg=req.status_code)
 
-        # Sleep for 11 s
-        print("We will sleep for 11 s. Please check server that test_function has been triggered")
-        time.sleep(11)
+        # Sleep for 16 s
+        print("We will sleep for 16 s. Please check server that test_function has been triggered")
+        time.sleep(16)
 
     
     def test_6_EventpoolStop(self):
@@ -405,7 +402,6 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 401, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
-        url = endpoint + "temperature/stop"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.put(url, headers=headers)
@@ -416,9 +412,6 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = endpoint + "temperature/stop"
-        headers = {'Content-Type': 'application/json',
-                   'Authorization': 'Bearer {0}'.format('')}
         req = requests.get(url, headers=headers)
         print("\n*** Answer testEventpoolStop : WITHOUT TOKEN ***")
         print("URL: ", url)
@@ -430,7 +423,6 @@ class TestAPI(unittest.TestCase):
         req = self.login('test', 'test')
         token = req.json()['token']
 
-        url = endpoint + "temperature/stop"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.get(url, headers=headers)
@@ -482,7 +474,6 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 401, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
-        url = endpoint + "temperature/read/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.put(url, headers=headers)
@@ -493,9 +484,6 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = endpoint + "temperature/read/" + str(sensor_id)
-        headers = {'Content-Type': 'application/json',
-                   'Authorization': 'Bearer {0}'.format('')}
         req = requests.get(url, headers=headers)
         print("\n*** Answer testReadTemp : WITHOUT TOKEN ***")
         print("URL: ", url)
@@ -504,7 +492,6 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 422, msg=req.status_code)
 
         # ===== TEST WITH TOKEN =====
-        url = endpoint + "temperature/read/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
         req = requests.get(url, headers=headers)
@@ -532,7 +519,6 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code, 401, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
-        url = endpoint + "temperature"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format('')}
         req = requests.put(url, headers=headers)
@@ -543,9 +529,6 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        url = endpoint + "temperature"
-        headers = {'Content-Type': 'application/json',
-                   'Authorization': 'Bearer {0}'.format('')}
         req = requests.get(url, headers=headers)
         print("\n*** Answer testGetTemp : WITHOUT TOKEN ***")
         print("URL: ", url)
@@ -557,21 +540,66 @@ class TestAPI(unittest.TestCase):
         req = self.login('test', 'test')
         token = req.json()['token']
 
-        url = endpoint + "temperature"
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
-        dt =datetime.now() - timedelta(seconds=15)
+        dt =datetime.utcnow() - timedelta(seconds=30)
         payload = {
             'sensor' : sensor_id3,
             'start_date' : dt.strftime('%Y-%m-%d %H:%M:%S'),
             'end_date' : datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
-        req = requests.get(url, headers=headers)
+        req = requests.get(url, headers=headers, json=payload)
         print("*** Answer testGetTemp : WITH TOKEN ***")
         print("URL: ", url)
         print("HEADERS: ", headers)
         print("PAYLOAD: ", payload)
+        print("GET VALUES FROM SENSOR: ", sensor_id3)
         print(req.text)
+        global temperature_rowid
+        temperature_rowid = req.json()[0][0]
+        self.assertEqual(req.status_code, 200, msg=req.status_code)
+
+    def test_9_DeleteTemp(self):
+
+        # ===== TEST WITH WRONG HEADER =====
+        url = endpoint + "temperature/" + str(temperature_rowid)
+        req = requests.delete(url)
+        print("*** Answer testDeleteTemp : WRONG HEADER ***")
+        print("URL: ", url)
+        print("ANSWER: ", req.text)
+        self.assertEqual(req.status_code, 401, msg=req.status_code)
+
+        # ===== TEST WRONG METHOD =====
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format('')}
+        req = requests.put(url, headers=headers)
+        print("*** Answer testDeleteTemp : WRONG METHOD ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code,405, msg=req.status_code)
+
+        # ===== TEST WITHOUT TOKEN =====
+        req = requests.delete(url, headers=headers)
+        print("\n*** Answer testDeleteTemp : WITHOUT TOKEN ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code, 422, msg=req.status_code)
+
+        # ===== TEST WITH TOKEN =====
+        req = self.login('test', 'test')
+        token = req.json()['token']
+
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format(token)}
+        req = requests.delete(url, headers=headers)
+        print("*** Answer testDeleteTemp : WITH TOKEN ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print("DELETE TEMPERATURE ROW: ", temperature_rowid)
+        print(req.text)
+        
         self.assertEqual(req.status_code, 200, msg=req.status_code)
 
     #===============================================================
