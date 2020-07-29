@@ -131,3 +131,4 @@ dmypy.json
 # MY IGNORE #
 #############
 transfer_rasp.sh
+temperature_db.db
