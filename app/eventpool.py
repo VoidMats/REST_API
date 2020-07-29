@@ -112,7 +112,7 @@ class EventPool():
         QUERY = ("DELETE FROM " + self.tbl_temp + 
                 " WHERE ROWID IN (SELECT ROWID FROM " + self.tbl_temp + 
                 " ORDER BY ROWID DESC LIMIT -1 OFFSET ?)")
-        result = conn.run_query_non_result(QUERY, (self.max_values))
+        result = conn.run_query_non_result(QUERY, (self.max_values, ))
         print(result)
 
     def __test_function(self) -> None:

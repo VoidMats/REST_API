@@ -342,14 +342,14 @@ def read_temp(id):
 
 
 # curl -d '{"sensor":"1", "start_date":"2020-07-01", "end_date":"2020-07-4"}' -H "Content-Type: application/json" -X GET http://localhost:5000/temperature
-@current_app.route('/temperature', methods=['GET'])
+@current_app.route('/temperature/collect', methods=['GET'])
 @jwt_required
 def get_temp():
 
     if (not request.is_json or 
-        request.json['sensor'] or
-        request.json['start_date'] or
-        request.json['end_date']):
+        not 'sensor' in request.json or
+        not 'start_date' in request.json or
+        not 'end_date' in request.json):
         raise APImissingParameter(400, name="Bad request", description="Missing parameters in request")
 
     print("We are inside route get_temp")
@@ -358,7 +358,7 @@ def get_temp():
     end_date = request.json.get('end_date', None)
 
     conn = db(current_app.config['APP_DATABASE'])
-    lst = db.run_query_result_many(c_queries.GET_TEMP, (start_date, end_date))
+    lst = conn.run_query_result_many(c_queries.GET_TEMP, (start_date, end_date))
     
     result = [(lambda x: x[1] == sensor_id)(row) for row in lst]
     return jsonify(result), 200
@@ -372,7 +372,7 @@ def delete_temp(id):
 
     print(c_queries.DELETE_TEMP)
     conn = db(current_app.config['APP_DATABASE'])
-    return_id = db.run_query_non_result(c_queries.DELETE_TEMP, (id, ))
+    return_id = conn.run_query_non_result(c_queries.DELETE_TEMP, (id, ))
     if return_id != id:
         raise APIreturnError(404, name='Not found', description='Return Id from the sql database is not correct')
     
