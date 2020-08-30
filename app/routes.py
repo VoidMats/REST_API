@@ -118,6 +118,8 @@ def generic_exception(e):
 
 @current_app.route('/auth/login', methods=['POST'])
 def login():
+
+    print("We are in login")
     try:
         if not request.is_json:
             raise APImissingParameter(400, "Missing json object in request")
