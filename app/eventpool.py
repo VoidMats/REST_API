@@ -47,6 +47,7 @@ class EventPool():
         self.tbl_temp = None
         self.tbl_sensor = None
         self.max_values = None
+        self.active = False
         self.time = time
         self.debug = debug
         self.testing = testing
@@ -67,10 +68,10 @@ class EventPool():
         self.tbl_sensor = tbl_sensor
         self.max_values = max_values
         
-    def start(self) -> bool:
+    def start(self, time) -> bool:
+        self.time = time
         # Create the  worker if needed
         if self.t_pool == None:
-            logging.debug("Create new worker")
             self.t_pool = Worker(
                 event=self.stop_flag, 
                 time=self.time,
@@ -79,7 +80,6 @@ class EventPool():
             logging.debug(self.t_pool.isAlive())
         # If worker is running check if its alive
         if not self.t_pool.isAlive():
-            logging.debug("Start the worker")
             self.stop_flag.clear()
             self.t_pool.start()
             return self.t_pool.isAlive()
@@ -87,10 +87,14 @@ class EventPool():
             return self.t_pool.isAlive()
 
     def stop(self) -> None:
-        if self.t_pool.isAlive():
-            logging.debug("Stop the worker")
-            self.stop_flag.set()
-        self.t_pool = None
+        # Make sure that pool is actually started
+        if self.t_pool != None:
+            if self.t_pool.isAlive():
+                self.stop_flag.set()
+            self.t_pool = None
+
+    def isEventpoolActive(self) -> bool:
+        return False if self.t_pool == None else True
 
     def __run_pool(self) -> None:
         if self.testing:
@@ -124,7 +128,6 @@ class EventPool():
                 " WHERE ROWID IN (SELECT ROWID FROM " + self.tbl_temp + 
                 " ORDER BY ROWID DESC LIMIT -1 OFFSET ?)")
         result = conn.run_query_non_result(QUERY, (self.max_values, ))
-        print(result)
 
     def __test_function(self) -> None:
         logging.debug("Trigger test_function")

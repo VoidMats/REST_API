@@ -8,7 +8,7 @@ class BaseConfig:
     """
     SECRET_KEY = env.get('SECRET_KEY') or 'secret'
     CORS_HEADERS = 'Content-Type'
-    INTERVAL_TIME = 5
+    INTERVAL_TIME = 3600
     TBL_SENSOR = 'tbl_sensor'
     TBL_TEMPERATURE = 'tbl_temperature'
     TBL_USER = 'tbl_user'

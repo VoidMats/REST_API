@@ -264,7 +264,7 @@ def start_temp(seconds):
     if seconds == None or seconds == '':
         raise APImissingParameter(400, name="Bad request", msg="Missing parameters in request")
 
-    result = pool.start()
+    result = pool.start(seconds)
     msg = {'msg':'Success' if result==True else 'Failed'}
 
     return jsonify(msg), 200
@@ -277,6 +277,14 @@ def stop_temp():
     pool.stop()
 
     return jsonify({'msg':'Success'}), 200
+
+@current_app.route('/temperature/active', methods=['GET'])
+@jwt_required
+def active_temp():
+    
+    result = pool.isEventpoolActive()
+
+    return jsonify({'msg':'Success', 'data':result}), 200
 
 
 @current_app.route('/temperature/read/<int:id>', methods=['GET'])
@@ -370,15 +378,12 @@ def get_temp():
 
     conn = db(current_app.config['APP_DATABASE'])
     lst = conn.run_query_result_many(c_queries.GET_TEMP, (start_date, end_date))
-    print(lst)
-    print(sensor_id)
-    print(type(sensor_id_checked))
 
     check_id = lambda x: x[1] == sensor_id_checked
     result = [row for row in lst if check_id(row)]
-    print(result)
+
     msg = {
-	'msg' : 'Success',
+	    'msg' : 'Success',
         'data' : result
     }
     return jsonify(msg), 200
@@ -398,8 +403,8 @@ def delete_temp(id):
         raise APIreturnError(404, name='Not found', description='Return Id from the sql database is not correct')
     
     msg = {
-        'Temperature' : id,
-        'Success' : 1 if last_row == 0 else 0
+        'msg' : 'Success' if last_row == 0 else 'Failed',
+        'data' : id
     }
     return jsonify(msg), 200
 
