@@ -36,6 +36,7 @@ class Worker(Thread):
 
     def run(self):
         while not self.stopped.wait(self.time):
+            logging.debug("Execute thread program")
             self.execute(*self.args, **self.kwargs)
 
 class EventPool():
@@ -49,12 +50,8 @@ class EventPool():
         self.time = time
         self.debug = debug
         self.testing = testing
+        self.t_pool = None
         self.stop_flag = Event()
-        self.t_pool = Worker(
-            event=self.stop_flag, 
-            time=time,
-            execute=self.__run_pool) 
-        self.t_pool.setDaemon(True)
 
     def setup_db(self, database='temperature_db.db', tbl_temp='tbl_temperature', tbl_sensor='tbl_sensor', max_values='max_values') -> None:
         self.database = database
@@ -71,15 +68,29 @@ class EventPool():
         self.max_values = max_values
         
     def start(self) -> bool:
-        if not self.t_pool.is_alive():
+        # Create the  worker if needed
+        if self.t_pool == None:
+            logging.debug("Create new worker")
+            self.t_pool = Worker(
+                event=self.stop_flag, 
+                time=self.time,
+                execute=self.__run_pool) 
+            self.t_pool.setDaemon(True)
+            logging.debug(self.t_pool.isAlive())
+        # If worker is running check if its alive
+        if not self.t_pool.isAlive():
+            logging.debug("Start the worker")
+            self.stop_flag.clear()
             self.t_pool.start()
-            return self.t_pool.is_alive()
+            return self.t_pool.isAlive()
         else:
-            return self.t_pool.is_alive()
+            return self.t_pool.isAlive()
 
     def stop(self) -> None:
-        if self.t_pool.is_alive():
+        if self.t_pool.isAlive():
+            logging.debug("Stop the worker")
             self.stop_flag.set()
+        self.t_pool = None
 
     def __run_pool(self) -> None:
         if self.testing:
@@ -100,7 +111,7 @@ class EventPool():
             result = self.__read_temperature(sensor)
             # Enter result into database
             QUERY = "INSERT INTO " + self.tbl_temp + " (int_sensor, real_value, str_date, str_comment) VALUES (?, ?, ?, ?)"
-            str_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            str_date = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
             #conn = DB_sqlite(self.database)
             return_id = conn.run_query_non_result(QUERY, (result[0], result[1], str_date, "Temperature reading from interval recording"))
@@ -152,6 +163,12 @@ class EventPool():
 
 if __name__ == '__main__':
     pool = EventPool(time=3, debug=True, testing=True)
+    logging.debug('Start the Eventpool with 3 sec interval')
+    pool.start()
+    sleep(15)
+    logging.debug('Stop the eventpool')
+    pool.stop()
+    sleep(5)
     logging.debug('Start the Eventpool with 3 sec interval')
     pool.start()
     sleep(15)

@@ -13,8 +13,8 @@ from datetime import datetime, timedelta
 # Our written python scripts
 #from config import TestingConfig
 
-endpoint = 'http://192.168.0.252:5045/'
-#endpoint = 'http://localhost:5045/'
+#endpoint = 'http://127.0.0.1:5045/'
+endpoint = 'http://localhost:5045/'
 
 """
 Important note - Gunicorn and Flask developement server uses different error codes

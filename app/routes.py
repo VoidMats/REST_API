@@ -17,6 +17,7 @@ from flask_jwt_extended import (
     create_access_token,
     get_jwt_identity
 )
+from flask_cors import CORS, cross_origin
 from werkzeug.exceptions import HTTPException
 from app.apiexception import (
     APIexception, 
@@ -38,7 +39,7 @@ from app.mitigate import Mitigate
 # =================================
 
 c_queries = Const(
-    GET_TEMP = "SELECT * FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE str_date BETWEEN ? AND ?",
+    GET_TEMP = "SELECT id, int_sensor, real_value, str_date FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE str_date BETWEEN ? AND ?",
     DELETE_TEMP = "DELETE FROM " + current_app.config['TBL_TEMPERATURE'] + " WHERE id = ?",
     CREATE_SENSOR = "INSERT INTO " + current_app.config['TBL_SENSOR'] + 
         " (str_name, str_folder, str_position, str_unit, str_date_created, str_comment) VALUES (?, ?, ?, ?, ?, ?)",
@@ -54,6 +55,7 @@ c_folders = Const(
 
 jwt = JWTManager(current_app)
 conn_test = None
+#CORS(current_app) // TODO this could be removed 
 
 # Mitigate the database
 try:
@@ -89,8 +91,9 @@ pool.setup_db(
 @current_app.errorhandler(Exception)
 def generic_exception(e):
     #Return JSON instead of HTML for HTTP errors.
-    print("Got an Exception convert to general response")
+
     if isinstance(e, HTTPException):
+        print("Got an HTTPException that has to be converted to general response")
         response = e.get_response()
         response.data = json.dumps({
             "code": e.code,
@@ -116,7 +119,8 @@ def generic_exception(e):
 # ====== ROUTES START HERE ======
 # ===============================
 
-@current_app.route('/auth/login', methods=['POST'])
+@current_app.route('/auth/login', methods=['POST', 'OPTIONS'])
+@cross_origin()
 def login():
     try:
         if not request.is_json:
@@ -152,7 +156,7 @@ def login():
     return jsonify({"msg": "Bad username or password"}), 401
     
 
-@current_app.route('/auth/logout', methods=['GET', 'OPTIONS'])
+@current_app.route('/auth/logout', methods=['GET'])
 def logout():
     try:
         pass
@@ -161,6 +165,7 @@ def logout():
 
 @current_app.route('/temperature/sensor', methods=['POST'])
 @jwt_required
+@cross_origin()
 def add_sensor():
     
     if (not request.is_json or 
@@ -193,7 +198,7 @@ def add_sensor():
     if not isinstance(return_id, int):
         raise APIreturnError(404, name='Not found', msg='Return Id from the sql database is not correct')
     
-    return jsonify({'sensor_id':return_id}), 201
+    return jsonify({'msg': 'Success', 'data':return_id}), 201
 
 @current_app.route('/temperature/sensor', methods=['GET'])
 @jwt_required
@@ -210,7 +215,7 @@ def get_all_sensor():
     if not isinstance(sensors, list):
         raise APIreturnError(404, name='Not found', msg='Sensor from the sql database is not correct')
     
-    return jsonify({'sensor':sensors}), 200
+    return jsonify({'msg' : 'Success', 'data' : sensors}), 200
 
 @current_app.route('/temperature/sensor/<int:id>', methods=['GET'])
 @jwt_required
@@ -229,10 +234,11 @@ def get_sensor(id):
     if not isinstance(sensor, list):
         raise APIreturnError(404, name='Not found', msg='Sensor from the sql database is not correct')
     
-    return jsonify({'sensor':sensor}), 200
+    return jsonify({'msg': 'Success', 'data': sensor}), 200
 
 @current_app.route('/temperature/sensor/<int:id>', methods=['DELETE'])
 @jwt_required
+@cross_origin()
 def delete_sensor(id):
     
     if id == None:
@@ -248,7 +254,7 @@ def delete_sensor(id):
     if not isinstance(sensor_id, int):
         raise APIreturnError(404, name="Not found", msg="Sensor id from SQL database is not valid")
 
-    return jsonify({'sensor_id':sensor_id}), 200
+    return jsonify({'msg': 'Success', 'data': sensor_id}), 200
 
 
 @current_app.route('/temperature/start/<int:seconds>', methods=['GET'])
@@ -259,18 +265,18 @@ def start_temp(seconds):
         raise APImissingParameter(400, name="Bad request", msg="Missing parameters in request")
 
     result = pool.start()
-    msg = {'Eventpool':'Success' if result==True else 'Failed'}
+    msg = {'msg':'Success' if result==True else 'Failed'}
 
     return jsonify(msg), 200
 
-@current_app.route('/temperature/stop', methods=['GET', 'OPTIONS'])
+@current_app.route('/temperature/stop', methods=['GET'])
 @jwt_required
 def stop_temp():
 
     # TODO try/except    
     pool.stop()
 
-    return jsonify({'Eventpool':'Success'}), 200
+    return jsonify({'msg':'Success'}), 200
 
 
 @current_app.route('/temperature/read/<int:id>', methods=['GET'])
@@ -286,8 +292,8 @@ def read_temp(id):
             # Return a mocked temperature value
             sensor = conn_test.run_query_result_many(c_queries.GET_SENSOR, (id, ))
             msg = {
-                'Sensor' : sensor[0],
-                'Temperature' : 26.54
+                'msg' : 'Success',
+                'data' : {'sensor' : sensor[0], 'temperature' : 26.54}
             }
             return jsonify(msg), 200
         else:
@@ -320,14 +326,14 @@ def read_temp(id):
 
             if sensor[4] == 'C' or sensor[4] == 'c':
                 msg = {
-                    'Sensor' : sensor,
-                    'Temperature' : temp_c
+                    'msg' : 'Success',
+                    'data' : { 'sensor' : sensor, 'temperature' : temp_c }
                 }
                 return jsonify(msg), 200
             elif sensor[4] == 'F' or sensor[4] == 'f':
                 msg = {
-                    'Sensor' : sensor,
-                    'Temperature' : temp_f
+                    'msg' : 'Success',
+                    'data' : {'sensor' : sensor, 'temperature' : temp_f }
                 }
                 return jsonify(msg), 200
             else:
@@ -341,27 +347,41 @@ def read_temp(id):
         abort(404, e)
 
 
-# curl -d '{"sensor":"1", "start_date":"2020-07-01", "end_date":"2020-07-4"}' -H "Content-Type: application/json" -X GET http://localhost:5000/temperature
-@current_app.route('/temperature/collect', methods=['GET'])
+# curl -d '{"sensor":"1", "start_date":"2020-07-01", "end_date":"2020-07-4"}' -H "Content-Type: application/json" -X POST http://localhost:5000/temperature
+@current_app.route('/temperature', methods=['POST'])
 @jwt_required
 def get_temp():
 
-    if (not request.is_json or 
+    if (not request.is_json or
         not 'sensor' in request.json or
         not 'start_date' in request.json or
         not 'end_date' in request.json):
         raise APImissingParameter(400, name="Bad request", description="Missing parameters in request")
 
-    print("We are inside route get_temp")
     sensor_id = request.json.get('sensor', None)
+    sensor_id_checked = None
+    if (isinstance(sensor_id, list)):
+        sensor_id_checked = int(sensor_id[0])
+    else:
+        sensor_id_checked = int(sensor_id)
+
     start_date = request.json.get('start_date', None)
     end_date = request.json.get('end_date', None)
 
     conn = db(current_app.config['APP_DATABASE'])
     lst = conn.run_query_result_many(c_queries.GET_TEMP, (start_date, end_date))
-    
-    result = [(lambda x: x[1] == sensor_id)(row) for row in lst]
-    return jsonify(result), 200
+    print(lst)
+    print(sensor_id)
+    print(type(sensor_id_checked))
+
+    check_id = lambda x: x[1] == sensor_id_checked
+    result = [row for row in lst if check_id(row)]
+    print(result)
+    msg = {
+	'msg' : 'Success',
+        'data' : result
+    }
+    return jsonify(msg), 200
 
 @current_app.route('/temperature/<int:id>', methods=['DELETE'])
 @jwt_required
@@ -372,11 +392,16 @@ def delete_temp(id):
 
     print(c_queries.DELETE_TEMP)
     conn = db(current_app.config['APP_DATABASE'])
-    return_id = conn.run_query_non_result(c_queries.DELETE_TEMP, (id, ))
-    if return_id != id:
+    last_row = conn.run_query_non_result(c_queries.DELETE_TEMP, (id, ))
+
+    if not isinstance(last_row, int) or last_row == -1:
         raise APIreturnError(404, name='Not found', description='Return Id from the sql database is not correct')
     
-    return jsonify(return_id), 200
+    msg = {
+        'Temperature' : id,
+        'Success' : 1 if last_row == 0 else 0
+    }
+    return jsonify(msg), 200
 
 # current_user = get_jwt_identity()
 # logged_in_as=current_user
