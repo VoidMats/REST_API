@@ -13,8 +13,8 @@ from datetime import datetime, timedelta
 # Our written python scripts
 #from config import TestingConfig
 
-endpoint = 'http://192.168.0.252:5045/'
-#endpoint = 'http://localhost:5045/'
+#endpoint = 'http://127.0.0.1:5054/'
+endpoint = 'http://localhost:5054/'
 
 """
 Important note - Gunicorn and Flask developement server uses different error codes
@@ -144,8 +144,9 @@ class TestAPI(unittest.TestCase):
         print("HEADERS: ", headers)
         print(req.text)
         global sensor_id 
-        sensor_id = req.json()['sensor_id']
+        sensor_id = req.json()['data']
         self.assertEqual(req.status_code, 201, msg=req.status_code)
+        self.assertEqual(req.json()['msg'], 'Success', msg=req.json())
 
     def test_2_GetSensor(self):
 
@@ -192,6 +193,7 @@ class TestAPI(unittest.TestCase):
         print("HEADERS: ", headers)
         print(req.text)
         self.assertEqual(req.status_code, 200, msg=req.status_code)
+        self.assertEqual(req.json()['msg'], 'Success', msg=req.json())
 
 
     def test_3_GetAllSensor(self):
@@ -243,7 +245,7 @@ class TestAPI(unittest.TestCase):
         }
         req = requests.post(url, headers=headers, json=payload)
         global sensor_id2 
-        sensor_id2 = req.json()['sensor_id']
+        sensor_id2 = req.json()['data']
         
         # Get all sensors
         url = endpoint + "/temperature/sensor"
@@ -255,6 +257,7 @@ class TestAPI(unittest.TestCase):
         print("HEADERS: ", headers)
         print(req.text)
         self.assertEqual(req.status_code, 200, msg=req.status_code)
+        self.assertEqual(req.json()['msg'], 'Success', msg=req.json())
         #self.assertEqual(req.json()['sensor'][0][0], sensor_id, req.json()['sensor'][0])
         #self.assertEqual(req.json()['sensor'][1][0], sensor_id2, req.json()['sensor'][1])
 
@@ -343,7 +346,7 @@ class TestAPI(unittest.TestCase):
         }
         req = requests.post(url, headers=headers, json=payload)
         global sensor_id3 
-        sensor_id3 = req.json()['sensor_id']
+        sensor_id3 = req.json()['data']
         self.assertEqual(req.status_code, 201, msg=req.status_code)
 
         # ===== TEST WITH WRONG HEADER =====
@@ -462,7 +465,7 @@ class TestAPI(unittest.TestCase):
         print("HEADERS: ", headers)
         print(req.text)
         global sensor_id 
-        sensor_id = req.json()['sensor_id']
+        sensor_id = req.json()['data']
         self.assertEqual(req.status_code, 201, msg=req.status_code)
 
         # ===== TEST WITH WRONG HEADER =====
@@ -516,7 +519,7 @@ class TestAPI(unittest.TestCase):
         print("*** Answer testGetTemp : WRONG HEADER ***")
         print("URL: ", url)
         print("ANSWER: ", req.text)
-        self.assertEqual(req.status_code, 401, msg=req.status_code)
+        self.assertEqual(req.status_code, 405, msg=req.status_code)
 
         # ===== TEST WRONG METHOD =====
         headers = {'Content-Type': 'application/json',
@@ -529,7 +532,10 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(req.status_code,405, msg=req.status_code)
 
         # ===== TEST WITHOUT TOKEN =====
-        req = requests.get(url, headers=headers)
+        url = endpoint + "temperature"
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format('')}
+        req = requests.post(url, headers=headers)
         print("\n*** Answer testGetTemp : WITHOUT TOKEN ***")
         print("URL: ", url)
         print("HEADERS: ", headers)
@@ -548,7 +554,7 @@ class TestAPI(unittest.TestCase):
             'start_date' : dt.strftime('%Y-%m-%d %H:%M:%S'),
             'end_date' : datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
-        req = requests.get(url, headers=headers, json=payload)
+        req = requests.post(url, headers=headers)
         print("*** Answer testGetTemp : WITH TOKEN ***")
         print("URL: ", url)
         print("HEADERS: ", headers)
