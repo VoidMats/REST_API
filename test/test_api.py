@@ -18,7 +18,7 @@ endpoint = 'http://localhost:5054/'
 
 """
 Important note - Gunicorn and Flask developement server uses different error codes
-during a failure. 
+during a failure.
 """
 
 sensor_id = None
@@ -231,7 +231,7 @@ class TestAPI(unittest.TestCase):
         # ===== TEST WITH TOKEN =====
         req = self.login('test', 'test')
         token = req.json()['token']
-        
+
         # Adding one more sensor
         url = endpoint + "/temperature/sensor"
         headers = {'Content-Type': 'application/json',
@@ -298,7 +298,7 @@ class TestAPI(unittest.TestCase):
         # ===== TEST WITH TOKEN =====
         req = self.login('test', 'test')
         token = req.json()['token']
-        
+
         # Delete first sensor
         url = endpoint + "temperature/sensor/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
@@ -393,7 +393,7 @@ class TestAPI(unittest.TestCase):
         print("We will sleep for 16 s. Please check server that test_function has been triggered")
         time.sleep(16)
 
-    
+
     def test_6_EventpoolStop(self):
 
         # ===== TEST WITH WRONG HEADER =====
@@ -605,7 +605,7 @@ class TestAPI(unittest.TestCase):
         print("HEADERS: ", headers)
         print("DELETE TEMPERATURE ROW: ", temperature_rowid)
         print(req.text)
-        
+
         self.assertEqual(req.status_code, 200, msg=req.status_code)
 
     #===============================================================
@@ -616,15 +616,13 @@ class TestAPI(unittest.TestCase):
         url = endpoint + "auth/login"
         headers = {'Content-Type': 'application/json'}
         payload = {
-            'username':user, 
+            'username':user,
             'password':pwd
         }
         return requests.post(url, headers=headers, json=payload)
- 
-    
+
+
 
 # Run REST_quality unittest
 if __name__ == '__main__':
     unittest.main()
-
-
