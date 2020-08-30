@@ -7,11 +7,12 @@ class BaseConfig:
     Basic config file for Flask application
     """
     SECRET_KEY = env.get('SECRET_KEY') or 'secret'
-    INTERVAL_TIME = 5
+    CORS_HEADERS = 'Content-Type'
+    INTERVAL_TIME = 3600
     TBL_SENSOR = 'tbl_sensor'
     TBL_TEMPERATURE = 'tbl_temperature'
     TBL_USER = 'tbl_user'
-    TBL_TEMP_MAX = 10000
+    TBL_TEMP_MAX = 50
 
 class ProductionConfig(BaseConfig):
     DEBUG = False
