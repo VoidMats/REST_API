@@ -62,11 +62,11 @@ class Mitigate():
             self.conn.mitigate_database(self.queries.CREATE_TABLE_TEMP)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_SENSOR)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_USER)
-            try:
-                # TODO run select test user
-                values = ('test_first', 'test_second', 'test', 'test')
-                self.conn.run_query_non_result(self.queries.INSERT_TEST_USER, values)
-            except APIsqlError as e:
-                print("Test user already made")
+
+            #try:
+                #values = ('test', 'test', 'test', 'test')
+                #self.conn.run_query_non_result(self.queries.INSERT_TEST_USER, values)
+            #except APIsqlError as e:
+            #    print("Test user already exist")
 
         return self.conn
