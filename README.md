@@ -1,5 +1,9 @@
 # SMART HOME CONTROL API
-REST API in python and flask which could be installed on a Raspberry Pi. For now the API can read and record the temperature from an one-wire sensor of type DS18B20. 
+REST API in python and flask which could be installed on a Raspberry Pi. For now the API can read and record the temperature from an one-wire sensor of type DS18B20. In futher version there will be the possibility to control output signals, hence controlling relays for external devices. There is a second repository for a possible UI in react under this link [Smart Home Control UI](https://github.com/VoidMats/SmartHomeControl_UI.git)
+
+### Version
+Smart Home Control is right now at <br>
+__Version 0.0.1__
 
 ## FUNCTIONALITIES OF THE API
 - Add/Get/Remove sensor that could be used to read the temperature
@@ -8,12 +12,108 @@ REST API in python and flask which could be installed on a Raspberry Pi. For now
 - Get recorded values from database
 - Set a maximum limit of recorded values in database
 
+## TECHNOLOGIES AND DEPENDENCIES
+The API uses the following dependencies to implement the API.  
+- Sqlite3 
+- Python3
+- Flask
+- Flask_jwt_extended
+
+## API REFERENCE
+Smarthome control generally allow HTTP GET/POST/DELETE requests with JSON arguments. The response will always be a JSON response with a field _msg_ for 'Success' or 'Failed' and a second field _data_ for any requestsed info. 
+
+### API endpoints
+
+- /auth/login [POST] <br>
+    Login procedure. The response contain a token which should be placed into the header for each request to be authorized for that specific request. <br> 
+    _Arguments_:
+    - 'username' : username to login 
+    - 'password' : password connected to the user
+    _Response_:
+    - 'msg' : 'Success' or 'Failed'
+    - 'data' : auth_token
+
+- /auth/logout [GET] <br>
+    Logout from the API. <br> 
+    Response:
+    - 'msg' : 'Success' or 'Failed'
+
+- /temperature/sensor [POST] <br>
+    Add a sensor to the API, so it later could be called for temperature. <br> 
+    _Arguments_:
+    - 'name' : Temperature sensor name. This is what will be visualied in any UI.
+    - 'folder' : The unique 64 bits address of the sensor
+    - 'position' : The placement of the sensor
+    - 'unit' : The temperature unit. Could be either Farenheit [F/f] or Celcius [C/c]
+    - 'comment' : Any extra text could be placed here
+    _Response_: <br>
+    - 'msg' : 'Success' or 'Failed'
+    - 'data' : sensor_id
+ 
+- /temperature/sensor [GET] <br>
+    Return all registered sensors on the node. <br>
+    _Response_: <br>
+    - 'msg' : 'Success'/'Failed'
+    - 'data' : [(sensor), (sensor), ...]
+
+- /temperature/sensor/<int:sensor_id> [GET] <br>
+    Return sensor values from id. <br>
+    _Response_: <br>
+    - 'msg' : 'Success' or 'Failed'
+    - 'data' : [sensor]
+
+- /temperature/sensor/<int:sensor_id> [DELETE] <br>
+    Delete sensor from the node.
+    _Response_: <br>
+    - 'msg' : 'Success' or 'Failed'
+    - 'data' : sensor_id
+
+- /temperature/start/<int:intervaltime> [GET] <br>
+    Start to record all temperature sensors on the node. The interval between each recording is set in seconds, with a minimum of 5 seconds. The recorded values are stored the in the database. <br>
+    _Response_: <br>
+    - 'msg' : 'Success' or 'Failed'
+
+- /temperature/stop [GET] <br>
+    Stop the recording of the temperature on this node. <br>
+    _Response_: <br>
+    - 'msg' : 'Success' or 'Failed'
+
+- /temperature/active [GET] <br>
+    Is the temperature recording active. <br>
+    _Response_: <br>
+    - 'msg' : 'Success' or 'Failed'
+    - 'data' : bool
+
+- /temperature/read/<int:sensor_id> [GET]
+    Return the temperature value from the sensor right now. 
+    _Response_: <br>
+    - 'msg' : 'Success' or 'Failed' 
+    - 'data' : {'sensor': sensor_id, 'temperature': value}
+
+- /temperature [GET]
+    Return the temperature values from the database within start date to end date for a specific sensor (sensor_id). 
+    _Arguments_: <br>
+    - 'sensor' : sensor_id as int
+    - 'start_date' : date as a string YYYY-mm-dd hh:mm:ss
+    - 'end_date' : date as a string YYYY-mm-dd hh:mm:ss
+    _Response_: <br>
+    - 'msg' : 'Success' or 'Failed'
+    - 'data' : [(temperature, timestamp), (temperature, timestamp), ...]
+
+- /temperature/<int:sensor_id> [DELETE]
+    Remove all recorded values from the database specific for sensor id. 
+    _Response_: <br>
+    - 'msg' : 'Success' or 'Failed'
+    - 'data' : sensor_id 
+
 ## ABOUT DS18B20
 The DS18B20 can be operated under what is called parasite power mode. Normally the chip or sensor has three wire; _Vcc_, _ground_ and _data_. Each sensor has an unique 64-bit address which is used to communicate through One-Wire protocol. Nowdays the operating system of a Raspberry Pi have an One-Wire Interface which this project is heavily depends on. The interface has to be enabled before use.
 
-![DS18B20 pinout](./images/DS18B20_pinout.png){:height="100px" width="100px"}
+<p align="center">
+<img src="./images/DS18B20_pinout.png" alt="drawing" width="300"/>
+</p>
 
-### TECHNICAL SPECIFICATIONS
+### Technical specifications
 - -55&deg;C to 125&deg;C range
 - 3,0V to 5,0V operating voltage
 - 750 ms sampling
@@ -22,15 +122,8 @@ The DS18B20 can be operated under what is called parasite power mode. Normally t
 
 For more details on configuring parasite power, setting alarm etc please search for a DS18B20 Datasheet.
 
-## TECHNOLOGIES AND DEPENDENCIES
-The API uses the following dependencies to implement the API.  
-- Sqlite3 
-- Python3
-- Flask
-- Flask_jwt_extended
-
 ## SETUP RASPBERRY PI
-Before any software could be installed the Raspberry Pi should be prepared with all wiring for one or as many sensors you need. Remember that the power voltage 3,3V goes into pin Vcc on the sensor and ground to the GND pin of the sensor. Finally find a free BCM channel which could be used for data communication (Middle pin of the sensor). The default One-Wire channel is 4, but any channel could be used as long its not configured for something else. Between the power and the data pin there should be a resistor of 4,7K-10K Ohm. See example of a setup BCM4.  
+Before any software could be installed the Raspberry Pi should be prepared with all wiring for one or as many sensors/relays you need. Remember that the power voltage 3,3V goes into pin Vcc on the sensor and ground to the GND pin of the sensor. Finally find a free BCM channel which could be used for data communication (Middle pin of the sensor). The default One-Wire channel is 4, but any channel could be used as long its not configured for something else. Between the power and the data pin there should be a resistor of 4,7K-10K Ohm. See example of a setup BCM4.  
 
 ![Simple setup of one sensor on BCM4 channel](./images/Setup_BCM4.png)
 
