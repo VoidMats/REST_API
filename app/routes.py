@@ -15,7 +15,8 @@ from flask_jwt_extended import (
     JWTManager, 
     jwt_required, 
     create_access_token,
-    get_jwt_identity
+    get_jwt_identity,
+    decode_token
 )
 from flask_cors import CORS, cross_origin
 from werkzeug.exceptions import HTTPException
@@ -46,7 +47,12 @@ c_queries = Const(
     GET_SENSOR = "SELECT * FROM " + current_app.config['TBL_SENSOR'] + " WHERE id = ?",
     GET_SENSOR_ALL = "SELECT * FROM " + current_app.config['TBL_SENSOR'],
     DELETE_SENSOR = "DELETE FROM " + current_app.config['TBL_SENSOR'] + " WHERE id = ?",
-    GET_USER = "SELECT * FROM " + current_app.config['TBL_USER'] + " WHERE str_user_name = ?"
+    GET_USER = "SELECT * FROM " + current_app.config['TBL_USER'] + " WHERE str_user_name = ?",
+    ADD_TOKEN = "INSERT INTO " + current_app.config['TBL_TOKEN'] + 
+        " (str_jti, str_token_type, str_username, str_date_expires) VALUES (?, ?, ?, ?)",
+    DELETE_TOKEN = "DELETE FROM " + current_app.config['TBL_TOKEN'] + " WHERE str_username = ?",
+    UPDATE_TOKEN = "UPDATE " + current_app.config['TBL_TOKEN'] + 
+        " SET str_jti=?, str_token_type=?, str_date_expires=? WHERE str_username=?"
 )
 
 c_folders = Const(
@@ -123,11 +129,11 @@ def generic_exception(e):
 @cross_origin()
 def login():
 
-    print("We are in login")
     try:
         if not request.is_json:
             raise APImissingParameter(400, "Missing json object in request")
     
+        print("we are in login")
         username = request.json.get('username', None)
         password = request.json.get('password', None)
 
@@ -138,32 +144,53 @@ def login():
 
         user = None
         if current_app.config['TESTING']:
+            print("Running in TESTING mode")
             user = conn_test.run_query_result_many(c_queries.GET_USER, (username, ))
         else:
-            print("we are not testing")
             conn = db(current_app.config['APP_DATABASE'])
             user = conn.run_query_result_many(c_queries.GET_USER, (username, ))
         
         if len(user) == 1:
-            access_token = create_access_token(identity=username)
+            access_token = create_access_token(identity=user)
+            decoded_token = decode_token(access_token)
+            # Get values from token to be stored
+            jti = decoded_token['jti']          # unique identifier
+            token_type = decoded_token['type']
+            #user_id = decoded_token[username]
+            expires = datetime.fromtimestamp(decoded_token['exp'])
+            # Store in database
+            try:
+                conn = db(current_app.config['APP_DATABASE'])
+                token_id = conn.run_query_non_result(c_queries.ADD_TOKEN, (jti, token_type, username, expires))
+            except APIsqlError as e:
+                token_id = conn.run_query_non_result(c_queries.UPDATE_TOKEN, (jti,token_type,expires,username))        
             msg = {
                 'msg' : 'Success',
-                'token' : access_token
+                'data' : access_token
             }
             return jsonify(msg), 200
 
     except APIexception as e:
         abort(e.code, description=e.msg)
 
-    return jsonify({"msg": "Bad username or password"}), 401
+    return jsonify({'msg': "Failed", 'data': {'error': "Bad username or password"}}), 401
     
 
 @current_app.route('/auth/logout', methods=['GET'])
+@jwt_required
 def logout():
+
     try:
-        pass
+        username = get_jwt_identity()[0][3]
+        # Remove token from database
+        conn = db(current_app.config['APP_DATABASE'])
+        token_id = conn.run_query_non_result(c_queries.DELETE_TOKEN, (username, ))
+        msg = {
+            'msg': 'Success'
+        }
+        return jsonify(msg), 200
     except APIexception as e:
-        print("Something")
+        abort(e.code, description=e.msg)
 
 @current_app.route('/temperature/sensor', methods=['POST'])
 @jwt_required
@@ -408,5 +435,4 @@ def delete_temp(id):
     }
     return jsonify(msg), 200
 
-# current_user = get_jwt_identity()
-# logged_in_as=current_user
+

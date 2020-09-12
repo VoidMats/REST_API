@@ -38,6 +38,14 @@ class Mitigate():
                 "str_user_name CHAR(50) NOT NULL UNIQUE, "
                 "str_password CHAR(250) NOT NULL UNIQUE)"
             ),
+            CREATE_TABLE_TOKENLIST = (
+                "CREATE TABLE IF NOT EXISTS tbl_token ("
+                "id INTEGER PRIMARY KEY, "
+                "str_jti CHAR(36) NOT NULL, "
+                "str_token_type CHAR(10) NOT NULL, "
+                "str_username CHAR(50) NOT NULL UNIQUE, "
+                "str_date_expires CHAR(30) NOT NULL)"
+            ),
             INSERT_TEST_USER = (
                 "INSERT INTO tbl_user ("
                 "str_first_name, "
@@ -55,6 +63,7 @@ class Mitigate():
             self.conn.mitigate_database(self.queries.CREATE_TABLE_TEMP)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_SENSOR)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_USER)
+            self.conn.mitigate_database(self.queries.CREATE_TABLE_TOKENLIST)
             values = ('test_first', 'test_second', 'test', 'test')
             self.conn.run_query_non_result(self.queries.INSERT_TEST_USER, values)
         else:
@@ -62,6 +71,7 @@ class Mitigate():
             self.conn.mitigate_database(self.queries.CREATE_TABLE_TEMP)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_SENSOR)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_USER)
+            self.conn.mitigate_database(self.queries.CREATE_TABLE_TOKENLIST)
 
             #try:
                 #values = ('test', 'test', 'test', 'test')
