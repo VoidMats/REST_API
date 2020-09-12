@@ -12,6 +12,7 @@ class BaseConfig:
     TBL_SENSOR = 'tbl_sensor'
     TBL_TEMPERATURE = 'tbl_temperature'
     TBL_USER = 'tbl_user'
+    TBL_TOKEN = 'tbl_token'
     TBL_TEMP_MAX = 50
 
 class ProductionConfig(BaseConfig):
