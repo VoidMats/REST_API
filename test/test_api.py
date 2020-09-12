@@ -42,7 +42,7 @@ class TestAPI(unittest.TestCase):
     # RUN TESTS
     #===============================================================
 
-    def test_0_Login(self):
+    def test_0_Login_Logout(self):
 
         # ===== TEST WRONG METHOD =====
         url = endpoint + "auth/login"
@@ -73,7 +73,28 @@ class TestAPI(unittest.TestCase):
         print("HEADERS: ", headers)
         print(req.text)
         self.assertEqual(req.status_code, 200, msg=req.status_code)
+        token = req.json()['data']
 
+        # ===== TEST WRONG METHOD =====
+        url = endpoint + "auth/logout"
+        headers = {'Content-Type': 'application/json'}
+        req = requests.put(url, headers=headers)
+        print("*** Answer test_Logout : WRONG METHOD ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code,405, msg=req.status_code)
+
+        # ===== TEST WITH TOKEN =====
+        url = endpoint + "auth/logout"
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format(token)}
+        req = requests.get(url, headers=headers)
+        print("\n*** Answer test_Logout : WITH TOKEN ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code, 200, msg=req.status_code)
 
     def test_1_AddSensor(self):
 
@@ -125,7 +146,7 @@ class TestAPI(unittest.TestCase):
 
         # ===== TEST WITH TOKEN =====
         req = self.login('test', 'test')
-        token = req.json()['token']
+        token = req.json()['data']
 
         url = endpoint + "/temperature/sensor"
         headers = {'Content-Type': 'application/json',
@@ -182,7 +203,7 @@ class TestAPI(unittest.TestCase):
 
         # ===== TEST WITH TOKEN =====
         req = self.login('test', 'test')
-        token = req.json()['token']
+        token = req.json()['data']
 
         url = endpoint + "temperature/sensor/" + str(sensor_id)
         headers = {'Content-Type': 'application/json',
@@ -230,7 +251,7 @@ class TestAPI(unittest.TestCase):
 
         # ===== TEST WITH TOKEN =====
         req = self.login('test', 'test')
-        token = req.json()['token']
+        token = req.json()['data']
 
         # Adding one more sensor
         url = endpoint + "/temperature/sensor"
@@ -297,7 +318,7 @@ class TestAPI(unittest.TestCase):
 
         # ===== TEST WITH TOKEN =====
         req = self.login('test', 'test')
-        token = req.json()['token']
+        token = req.json()['data']
 
         # Delete first sensor
         url = endpoint + "temperature/sensor/" + str(sensor_id)
@@ -332,7 +353,7 @@ class TestAPI(unittest.TestCase):
     def test_5_EventpoolStart(self):
 
         req = self.login('test', 'test')
-        token = req.json()['token']
+        token = req.json()['data']
 
         url = endpoint + "/temperature/sensor"
         headers = {'Content-Type': 'application/json',
@@ -377,7 +398,7 @@ class TestAPI(unittest.TestCase):
 
         # ===== TEST WITH TOKEN =====
         req = self.login('test', 'test')
-        token = req.json()['token']
+        token = req.json()['data']
 
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
@@ -424,7 +445,7 @@ class TestAPI(unittest.TestCase):
 
         # ===== TEST WITH TOKEN =====
         req = self.login('test', 'test')
-        token = req.json()['token']
+        token = req.json()['data']
 
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
@@ -446,7 +467,7 @@ class TestAPI(unittest.TestCase):
 
         # ====== ADDING ONE SENSOR ======
         req = self.login('test', 'test')
-        token = req.json()['token']
+        token = req.json()['data']
 
         url = endpoint + "/temperature/sensor"
         headers = {'Content-Type': 'application/json',
@@ -544,7 +565,7 @@ class TestAPI(unittest.TestCase):
 
         # ===== TEST WITH TOKEN =====
         req = self.login('test', 'test')
-        token = req.json()['token']
+        token = req.json()['data']
 
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
@@ -562,7 +583,8 @@ class TestAPI(unittest.TestCase):
         print("GET VALUES FROM SENSOR: ", sensor_id3)
         print(req.text)
         global temperature_rowid
-        temperature_rowid = req.json()[0][0]
+        print(req.json())
+        temperature_rowid = req.json()['data'][0][0]
         self.assertEqual(req.status_code, 200, msg=req.status_code)
 
     def test_9_DeleteTemp(self):
@@ -595,7 +617,7 @@ class TestAPI(unittest.TestCase):
 
         # ===== TEST WITH TOKEN =====
         req = self.login('test', 'test')
-        token = req.json()['token']
+        token = req.json()['data']
 
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(token)}
