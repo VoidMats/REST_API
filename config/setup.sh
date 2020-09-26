@@ -3,29 +3,39 @@
 sudo -n true
 test $? -eq 0 || exit "Need sudo priveledge to run script"
 
-#apt-get update
+
+echo "** Change directory **"
+cd ..
+
+echo "** Update system **"
+apt-get update
 
 echo "** Installing python3 and pip **"
-#apt-get install python3-pip python3-dev
+apt-get install python3-pip python3-dev
+
 echo "** Install supervisor **"
-# sudo apt install supervisor
+sudo apt install supervisor
 
 echo "** Create a virtual envirement and activate it **"
-#python3 -m venv venv
-#source venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 
 echo "** Install gunicorn into virtual envirement **"
-#pip3 install gunicorn
+pip3 install gunicorn
+
 echo "** Install flask into virtual envirement **"
-#pip3 install flask 
+pip3 install flask 
+
 echo "** Install flask-cors **"
-#pip3 install -U flask-cors
+pip3 install -U flask-cors
+
 echo "** Install flask-jwt-extended **"
-#pip3 install flask-jwt-extended
+pip3 install flask-jwt-extended
+
 echo "** Install requests **"
-#pip3 install requests
+pip3 install requests
 
-
+echo "************ INPUT VALUES **************"
 while :; do
     read -r -p 'Write password to encode/decode JWT token: ' key
     export SECRET_KEY="${key}"
@@ -47,24 +57,30 @@ while :; do
 done
 
 echo "Adding new user 'smarthomenode'"
-#adduser smarthomenode
-#adduser smarthomenode sudo 
+adduser smarthomenode
+adduser smarthomenode sudo 
 
 echo "Adding rights to user on the folder"
-folder = readlink -f ../boot.sh
-folderfile = "${folder}/boot.sh"
-folderconfig = "${folder}/config/smarthome_node.ini"
-chown -R smarthomenode:smarthomenode "${folder}"
+folderfile=$(eval "readlink -f boot.sh")
+folder=$(eval "dirname -- ${folderfile}")
+folderconfig="${folder}/config/smarthome_node.conf"
 
-echo "Modify ini file"
-sed -i -E "s/(directory=).+/\1${folder}/g" ./smarthome_node.ini
-sed -i -E "s/(command=).+/\1${folderfile}/g" ./smarthome_node.ini
+echo "Change permission on folder"
+#chown -R smarthomenode:smarthomenode "${folder}"
+
+echo "Modify conf file"
+#sed -i -E "s/(directory=).+/\1${folder}/g" ./smarthome_node.conf
+#sed -i -E "s/(command=).+/\1${folderfile}/g" ./smarthome_node.conf
+echo "directory=${folder}" >> ./config/smarthome_node.conf
+echo "command=${folderfile}" >> ./config/smarthome_node.conf
 
 echo "Create symlink for supervisor"
-ln -s "${folderconfig}" /usr/local/etc/supervisor.d/
+ln -s "${folderconfig}" /etc/supervisor/conf.d/smarthome_node.conf
 
 echo "Reread configfile in supervisor"
 supervisorctl reread
 supervisorctl update
 supervisorctl avail
 supervisorctl restart  
+
+cd config
