@@ -7,7 +7,6 @@ fi
 exec "$@"
 
 export RUN_MODE=production
-
 gunicorn -b 0.0.0.0:5054 --threads 4 --access-logfile - --error-logfile - TEMP_API:app
 
 # -b or --bind=x.x.x.x:num = bind ip and port
