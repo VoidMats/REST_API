@@ -3,7 +3,7 @@ REST API in python and flask which could be installed on a Raspberry Pi. For now
 
 ### Version
 Smart Home Control is right now at <br>
-__Version 0.0.1__
+__Version 0.0.2__
 
 ## FUNCTIONALITIES OF THE API
 - Add/Get/Remove sensor that could be used to read the temperature
@@ -24,7 +24,7 @@ Smarthome control generally allow HTTP GET/POST/DELETE requests with JSON argume
 
 ### API endpoints
 
-- /auth/login [POST] <br>
+- /auth/login __[POST]__ <br>
     Login procedure. The response contain a token which should be placed into the header for each request to be authorized for that specific request. <br> 
     _Arguments_:
     - 'username' : username to login 
@@ -33,12 +33,12 @@ Smarthome control generally allow HTTP GET/POST/DELETE requests with JSON argume
     - 'msg' : 'Success' or 'Failed'
     - 'data' : auth_token
 
-- /auth/logout [GET] <br>
+- /auth/logout __[GET]__ <br>
     Logout from the API. <br> 
-    Response:
+    _Response_: <br>
     - 'msg' : 'Success' or 'Failed'
 
-- /temperature/sensor [POST] <br>
+- /temperature/sensor __[POST]__ <br>
     Add a sensor to the API, so it later could be called for temperature. <br> 
     _Arguments_:
     - 'name' : Temperature sensor name. This is what will be visualied in any UI.
@@ -50,48 +50,48 @@ Smarthome control generally allow HTTP GET/POST/DELETE requests with JSON argume
     - 'msg' : 'Success' or 'Failed'
     - 'data' : sensor_id
  
-- /temperature/sensor [GET] <br>
+- /temperature/sensor __[GET]__ <br>
     Return all registered sensors on the node. <br>
     _Response_: <br>
     - 'msg' : 'Success'/'Failed'
     - 'data' : [(sensor), (sensor), ...]
 
-- /temperature/sensor/<int:sensor_id> [GET] <br>
+- /temperature/sensor/<int:sensor_id> __[GET]__ <br>
     Return sensor values from id. <br>
     _Response_: <br>
     - 'msg' : 'Success' or 'Failed'
     - 'data' : [sensor]
 
-- /temperature/sensor/<int:sensor_id> [DELETE] <br>
-    Delete sensor from the node.
+- /temperature/sensor/<int:sensor_id> __[DELETE]__ <br>
+    Delete sensor from the node. <br>
     _Response_: <br>
     - 'msg' : 'Success' or 'Failed'
     - 'data' : sensor_id
 
-- /temperature/start/<int:intervaltime> [GET] <br>
+- /temperature/start/<int:intervaltime> __[GET]__ <br>
     Start to record all temperature sensors on the node. The interval between each recording is set in seconds, with a minimum of 5 seconds. The recorded values are stored the in the database. <br>
     _Response_: <br>
     - 'msg' : 'Success' or 'Failed'
 
-- /temperature/stop [GET] <br>
+- /temperature/stop __[GET]__ <br>
     Stop the recording of the temperature on this node. <br>
     _Response_: <br>
     - 'msg' : 'Success' or 'Failed'
 
-- /temperature/active [GET] <br>
+- /temperature/active __[GET]__ <br>
     Is the temperature recording active. <br>
     _Response_: <br>
     - 'msg' : 'Success' or 'Failed'
     - 'data' : bool
 
-- /temperature/read/<int:sensor_id> [GET]
-    Return the temperature value from the sensor right now. 
+- /temperature/read/<int:sensor_id> __[GET]__ <br>
+    Return the temperature value from the sensor right now. <br> 
     _Response_: <br>
     - 'msg' : 'Success' or 'Failed' 
     - 'data' : {'sensor': sensor_id, 'temperature': value}
 
-- /temperature [GET]
-    Return the temperature values from the database within start date to end date for a specific sensor (sensor_id). 
+- /temperature __[GET]__ <br>
+    Return the temperature values from the database within start date to end date for a specific sensor (sensor_id). <br>
     _Arguments_: <br>
     - 'sensor' : sensor_id as int
     - 'start_date' : date as a string YYYY-mm-dd hh:mm:ss
@@ -100,7 +100,7 @@ Smarthome control generally allow HTTP GET/POST/DELETE requests with JSON argume
     - 'msg' : 'Success' or 'Failed'
     - 'data' : [(temperature, timestamp), (temperature, timestamp), ...]
 
-- /temperature/<int:sensor_id> [DELETE]
+- /temperature/<int:sensor_id> __[DELETE]__ <br>
     Remove all recorded values from the database specific for sensor id. 
     _Response_: <br>
     - 'msg' : 'Success' or 'Failed'
@@ -168,16 +168,49 @@ $ lsmod | grep w1
 ```
 The list should contain _w1_therm_, _w1_gpio_ and _wire_. 
 
-Clone the repository to the Raspberry Pi and run the installation bash file in the root of the application folder (what ever you call it). Follow the instructions of the script. 
+Clone the repository to the Raspberry Pi and run the bash file _setup.sh_ in the folder config of the application folder (whatever you call it). Follow the instructions of the script. 
 
 ```linux
 $ git clone https://github.com/VoidMats/SmartHomeControl_API.git [your folder name]
 $ source ./[your folder name]/install.sh
 ```
-
-
-## CONFIG FILE
-
+## MANUAL INSTALLATION
+Instead of running the _setup.sh_ file it possible to install the application manually by running some commands in the terminal through ssh. Some of the commands must be done under _root_ privileges.  
+```linux
+$ apt-get update
+$ apt-get install python3-pip python3-dev
+$ apt-get install supervisor
+$ python3 -m venv venv
+$ source venv/bin/activate
+$ pip3 install gunicorn
+$ pip3 install flask
+$ pip3 install -U flask-cors
+$ pip3 install flask-jwt-extended
+$ pip3 install requests
+```
+Change the boot.sh file with port of your choose. Add also the smarthome_node.conf file with two lines.
+```linux
+directory=[/installed/path/of/repo]
+command=/bin/bash [/installed/path/of/repo]/boot.sh
+```
+Adding new user for the application. 
+```linux
+$ adduser smarthomenode
+$ adduser smarthomenode sudo
+$ chown -R smarthomenode:smarthomenode [/installed/path/of/repo]
+```
+Create a symlink for the smarthome_node.conf file
+```linux
+ls -s [/installed/path/of/repo]/config/smarthome_node.conf /etc/supervisor/conf.d/smarthome_node.conf
+```
+Restart supervisor and check that the application is running. 
+```linux
+$ supervisorctl reread
+$ supervisorctl update
+$ supervisorctl avail
+$ supervisorctl restart
+$ supervisorctl status
+```
 
 ## FURTHER INFORMATION
 Using DS18B20 sensor on a Raspberry Pi:
