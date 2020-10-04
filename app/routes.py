@@ -198,9 +198,10 @@ def logout():
 def get_all_w1_devices():
 
     tmp = subprocess.Popen(['ls', '/sys/bus/w1/devices/'], stdout = subprocess.PIPE)
-    output = str(tmp.communicate())
-    devices = output.split(' ')
-    print(devices)
+    output = tmp.communicate()[0]
+    output = output.decode('UTF-8')
+    devices = output.split('\n')
+    devices = [e for e in devices if e != '']
     try: 
         devices.remove('w1_bus_master1')
     except ValueError as e:

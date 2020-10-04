@@ -13,8 +13,8 @@ from datetime import datetime, timedelta
 # Our written python scripts
 #from config import TestingConfig
 
-#endpoint = 'http://127.0.0.1:5054/'
-endpoint = 'http://localhost:5054/'
+endpoint = 'http://192.168.1.52:5055/'
+#endpoint = 'http://localhost:5054/'
 
 """
 Important note - Gunicorn and Flask developement server uses different error codes
@@ -634,6 +634,7 @@ class TestAPI(unittest.TestCase):
 
         # ===== TEST WITH WRONG HEADER =====
         url = endpoint + "temperature/devices"
+        print(url)
         req = requests.get(url)
         print("*** Answer testGetDevices : WRONG HEADER ***")
         print("URL: ", url)
