@@ -1,8 +1,8 @@
-# SMART HOME CONTROL API
+# SMARTHOME NODE
 REST API in python and flask which could be installed on a Raspberry Pi. For now the API can read and record the temperature from an one-wire sensor of type DS18B20. In futher version there will be the possibility to control output signals, hence controlling relays for external devices. There is a second repository for a possible UI in react under this link [Smart Home Control UI](https://github.com/VoidMats/SmartHomeControl_UI.git)
 
 ### Version
-Smart Home Control is right now at <br>
+SmartHome node is right now at <br>
 __Version 0.0.2__
 
 ## FUNCTIONALITIES OF THE API
