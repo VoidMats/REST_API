@@ -630,6 +630,49 @@ class TestAPI(unittest.TestCase):
 
         self.assertEqual(req.status_code, 200, msg=req.status_code)
 
+    def test_10_GetDevices(self):
+
+        # ===== TEST WITH WRONG HEADER =====
+        url = endpoint + "temperature/devices"
+        req = requests.get(url)
+        print("*** Answer testGetDevices : WRONG HEADER ***")
+        print("URL: ", url)
+        print("ANSWER: ", req.text)
+        self.assertEqual(req.status_code, 401, msg=req.status_code)
+
+        # ===== TEST WRONG METHOD =====
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format('')}
+        req = requests.put(url, headers=headers)
+        print("*** Answer testGetDevices : WRONG METHOD ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code,405, msg=req.status_code)
+
+        # ===== TEST WITHOUT TOKEN =====
+        req = requests.get(url, headers=headers)
+        print("\n*** Answer testGetDevices : WITHOUT TOKEN ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print(req.text)
+        self.assertEqual(req.status_code, 422, msg=req.status_code)
+
+        # ===== TEST WITH TOKEN =====
+        req = self.login('test', 'test')
+        token = req.json()['data']
+
+        headers = {'Content-Type': 'application/json',
+                   'Authorization': 'Bearer {0}'.format(token)}
+        req = requests.get(url, headers=headers)
+        print("*** Answer testGetDevices : WITH TOKEN ***")
+        print("URL: ", url)
+        print("HEADERS: ", headers)
+        print("DEVICES ON NODE: ", req.json()['data'])
+        print(req.text)
+
+        self.assertEqual(req.status_code, 200, msg=req.status_code)
+
     #===============================================================
     # INTERNAL METHODS
     #===============================================================

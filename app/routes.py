@@ -3,6 +3,7 @@
 from datetime import datetime
 import os
 import re
+import subprocess
 from flask import (
     Flask, 
     abort, 
@@ -192,6 +193,25 @@ def logout():
     except APIexception as e:
         abort(e.code, description=e.msg)
 
+@current_app.route('/temperature/devices', methods=['GET'])
+@jwt_required
+def get_all_w1_devices():
+
+    tmp = subprocess.Popen(['ls', '/sys/bus/w1/devices/'], stdout = subprocess.PIPE)
+    output = str(tmp.communicate())
+    devices = output.split(' ')
+    print(devices)
+    try: 
+        devices.remove('w1_bus_master1')
+    except ValueError as e:
+        pass # Can't fine w1_bus_master1. Swallow exception
+
+    msg = {
+        'msg' : 'Success',
+        'data' : devices
+    }
+    return jsonify(msg), 200
+
 @current_app.route('/temperature/sensor', methods=['POST'])
 @jwt_required
 @cross_origin()
@@ -240,7 +260,6 @@ def get_all_sensor():
         conn = db(current_app.config['APP_DATABASE'])
         sensors = conn.run_query_result_many(c_queries.GET_SENSOR_ALL)
 
-    print(sensors)
     if not isinstance(sensors, list):
         raise APIreturnError(404, name='Not found', msg='Sensor from the sql database is not correct')
     
@@ -434,5 +453,8 @@ def delete_temp(id):
         'data' : id
     }
     return jsonify(msg), 200
+
+
+
 
 

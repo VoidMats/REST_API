@@ -101,7 +101,7 @@ Smarthome control generally allow HTTP GET/POST/DELETE requests with JSON argume
     - 'data' : [(temperature, timestamp), (temperature, timestamp), ...]
 
 - /temperature/<int:sensor_id> __[DELETE]__ <br>
-    Remove all recorded values from the database specific for sensor id. 
+    Remove all recorded values from the database specific for sensor id. <br> 
     _Response_: <br>
     - 'msg' : 'Success' or 'Failed'
     - 'data' : sensor_id 
