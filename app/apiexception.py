@@ -16,6 +16,14 @@ class APImissingParameter(APIexception):
 
     def __str__(self):
         return "{} - {}".format(self.code, self.msg)
+
+class APIfaultyParameter(APIexception):
+
+    def __init__(self, code, name, msg=None):
+        super().__init__(code, name, msg=msg)
+
+    def __str__(self):
+        return "{} - {}".format(self.code, self.msg)
     
 class APItokenError(APIexception):
     

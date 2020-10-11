@@ -674,6 +674,18 @@ class TestAPI(unittest.TestCase):
 
         self.assertEqual(req.status_code, 200, msg=req.status_code)
 
+    def test_11_AddSignal(self):
+        pass
+
+    def test_12_GetSignal(self):
+        pass
+
+    def test_13_GetStateSignals(self):
+        pass
+
+    def test_13_DeleteSignal(self):
+        pass
+    
     #===============================================================
     # INTERNAL METHODS
     #===============================================================

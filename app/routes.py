@@ -24,9 +24,13 @@ from werkzeug.exceptions import HTTPException
 from app.apiexception import (
     APIexception, 
     APImissingParameter, 
+    APIfaultyParameter,
     APIreturnError,
     APIsqlError,
     APIonewireError
+)
+from gpiozero import (
+    LED
 )
 from app.db_sqlite import DB_sqlite as db
 from app.handlers import Const
@@ -48,6 +52,9 @@ c_queries = Const(
     GET_SENSOR = "SELECT * FROM " + current_app.config['TBL_SENSOR'] + " WHERE id = ?",
     GET_SENSOR_ALL = "SELECT * FROM " + current_app.config['TBL_SENSOR'],
     DELETE_SENSOR = "DELETE FROM " + current_app.config['TBL_SENSOR'] + " WHERE id = ?",
+    GET_SIGNAL = "SELECT * FROM " + current_app.config['TBL_SIGNAL'] + " WHERE id = ?",
+    GET_SIGNAL_ALL = "SELECT * FROM " + current_app.config['TBL_SIGNAL'],
+    DELETE_SIGNAL = "DELETE FROM " + current_app.config['TBL_SIGNAL'] + " WHERE id = ?",
     GET_USER = "SELECT * FROM " + current_app.config['TBL_USER'] + " WHERE str_user_name = ?",
     ADD_TOKEN = "INSERT INTO " + current_app.config['TBL_TOKEN'] + 
         " (str_jti, str_token_type, str_username, str_date_expires) VALUES (?, ?, ?, ?)",
@@ -78,6 +85,29 @@ try:
 except APIsqlError as e:
     print("Error when mitigating the database")
     raise 
+
+# Start the signal_pool
+signal_pool = {}
+try:
+    # Get output data for node
+
+    if current_app.config['TESTINNG']:
+        pass
+    else:
+        conn = db(current_app.config['APP_DATABASE'])
+        signals = conn.run_query_result_many(c_queries.GET_SIGNAL_ALL)
+        for signal in signals:
+            if signal.type.lower() == 'output':
+                signal_pool[signal.pin] = LED(signal.pin)
+            elif signal.type.lower() == 'input':
+                pass
+            else:
+                raise APIsqlError(500, "Faulty signal type in SQL server") 
+
+
+except APIsqlError as e:
+    print("Error during setup of the signal pool")
+    raise
 
 # Start the EventServer
 pool = EventServer(
@@ -397,9 +427,9 @@ def read_temp(id):
                 APIreturnError(404, name="Not found", msg="Sensor setting has an unknown unit")
         
     except APIexception as e:
-        if not name in e:
+        if not 'name' in e:
             e.name = "General fault"
-        if not msg in e:
+        if not 'msg' in e:
             e.msg = "Server error - {}".format(e.description()) 
         abort(404, e)
 
@@ -455,7 +485,112 @@ def delete_temp(id):
     }
     return jsonify(msg), 200
 
+@current_app.route('/output/', methods=['POST'])
+@jwt_required
+def add_output():
 
+    if (not request.is_json or
+        not 'name' in request.json or
+        not 'pin' in request.json or
+        not 'type' in request.json or
+        not 'initial_value' in request.json or
+        not 'active_high' in request.json or
+        not 'comment' in request.json):
+        raise APImissingParameter(400, name="Bad request", description="Missing parameters in request")
 
+    conn = db(current_app.config['APP_DATABASE'])
+    last_row = conn.run_query_non_result(c_queries.CREATE_SIGNAL, 
+        ())
+    if not isinstance(last_row, int) or last_row == -1:
+        raise APIreturnError(404, name='Not found', description='Return Id from the sql database is not correct')
+    
+    signal_pool[request.json.pin] = LED(request.json.pin)  # Example "GPIO17"
 
+    msg = {
+        'msg' : 'Success' if last_row != 0 else 'Failed',
+        'data' : request.json.pin
+    }
+    return jsonify(msg), 200
 
+@current_app.route('/output/<string:pin>', methods=['DELETE'])
+@jwt_required
+def remove_output(pin):
+    
+    if pin == None  or pin == '':
+        raise APImissingParameter(400, "Missing parameter in request")
+
+    conn = db(current_app.config['APP_DATABASE'])
+    signal = conn.run_query_result_many(c_queries.GET_SIGNAL, (id, ))
+    if signal.count == 1 and signal[0].int_initial == 1:
+        print(signal)
+        signal_pool[pin].off()
+        signal_pool[pin].close()
+    elif signal.count == 1 and signal[0].int_inital == 0:
+        print(signal)
+        signal_pool[pin].on()
+        signal_pool[pin].close()
+    else:
+        raise APIreturnError(404, 
+            name='Not found or more then one signal', 
+            description='Return Id from sql database contain zero or more than one signal')
+    signal_pool.pop(pin)
+
+    msg = {
+        'msg' : 'Success',
+        'data' : pin
+    }
+    return jsonify(msg), 200
+
+@current_app.route('/output/state', methods=['GET'])
+@jwt_required
+def state_all_output():
+    
+    conn = db(current_app.config['APP_DATABASE'])
+    signals = conn.run_query_result_many(c_queries.GET_SIGNAL_ALL)
+    data = {}
+    for signal in signals:
+        if signal.str_type == "OUTPUT":
+            tmp = (signal.name, signal.pin, signal_pool[signal.str_pin].is_lit)
+            data[signal.str_pin] = tmp
+
+    msg = {
+        'msg' : 'Success',
+        'data' : data
+    }
+    return jsonify(msg), 200
+
+@current_app.route('/output/state/<string:pin>', methods=['GET'])
+@jwt_required
+def state_output(pin):
+    
+    if pin == None  or pin == '':
+        raise APImissingParameter(400, "Missing parameter in request")
+
+    msg = {
+        'msg' : 'Success',
+        'data' : {pin: signal_pool[pin].is_lit}
+    }
+    return jsonify(msg), 200
+
+@current_app.route('/output/state/<string:pin>/<string:state>', methods=['PUT'])
+@jwt_required
+def change_state_output(pin, state):
+    
+    if pin == None or pin == '':
+        raise APImissingParameter(400, "Missing parameter in request")
+
+    if pin in signal_pool.keys():
+        if state.lower() == 'on':
+            signal_pool[pin].on()
+        elif state.lower() == 'off':
+            signal_pool[pin].off()
+        else:
+            signal_pool[pin].toggle()
+    else:
+        raise APIfaultyParameter(400, "Signal pin does not exist")
+
+    msg = {
+        'msg' : 'Success',
+        'data' : pin
+    }
+    return jsonify(msg), 200

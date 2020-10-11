@@ -29,6 +29,16 @@ class Mitigate():
                 "str_date_created CHAR(30), "
                 "str_comment CHAR(50) )"
             ),
+            CREATE_TABLE_SIGNAL = (
+                "CREATE TABLE IF NOT EXISTS tbl_signal ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "str_name CHAR(50), "
+                "str_pin CHAR(6) NOT NULL UNIQUE, "
+                "str_type CHAR(10) NOT NULL, "
+                "int_initial_value INT DEFAULT 0, "
+                "int_active_high INT DEFAULT 1, "
+                "str_comment CHAR(50) )"
+            ),
             # TODO hash password
             CREATE_TABLE_USER = (
                 "CREATE TABLE IF NOT EXISTS tbl_user ("
@@ -62,6 +72,7 @@ class Mitigate():
             self.conn = db(self.database, memory=True)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_TEMP)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_SENSOR)
+            self.conn.mitigate_database(self.queries.CREATE_TABLE_SIGNAL)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_USER)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_TOKENLIST)
             values = ('test_first', 'test_second', 'test', 'test')
@@ -70,6 +81,7 @@ class Mitigate():
             self.conn = db(self.database)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_TEMP)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_SENSOR)
+            self.conn.mitigate_database(self.queries.CREATE_TABLE_SIGNAL)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_USER)
             self.conn.mitigate_database(self.queries.CREATE_TABLE_TOKENLIST)
 

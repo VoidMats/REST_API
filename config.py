@@ -10,6 +10,7 @@ class BaseConfig:
     CORS_HEADERS = 'Content-Type'
     INTERVAL_TIME = 3600
     TBL_SENSOR = 'tbl_sensor'
+    TBL_SIGNAL = 'tbl_signal'
     TBL_TEMPERATURE = 'tbl_temperature'
     TBL_USER = 'tbl_user'
     TBL_TOKEN = 'tbl_token'
